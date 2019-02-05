@@ -19,11 +19,13 @@ import os
 message_Logging_Queue = Queue()
 subprocessQueue = Queue()
 subprocessReturnQueue = Queue()
-
 disk_Check_Queue = Queue()
 
-# special queue to pass data/results back from subprocess thread to main
+
+# special queues to pass data/results back from subprocess/diskCheck threads to main
 subprocessResultsQueue = Queue()
+diskCheckResultsQueue = Queue()
+
 
 returned_Data_Queue = Queue()
 
@@ -106,6 +108,20 @@ def get_current_timestamp_footer():
     LOG_FILE_EXIT_FOOTER = "=== Media Grabber (Emgee) application exit @ " + CURRENT_TIMESTAMP + " ==="
     return LOG_FILE_EXIT_FOOTER
 
+class disc_metaData(object):
+
+    def __init__(self, result):
+        self.raw = result
+        self.track_number = 0
+        self.tracks = None
+        self.meta_parse(self.raw)
+
+    def meta_parse(self, data):
+        for line in str(data):
+            if line.__contains__("TCOUNT"):
+                self.track_number = line.split(":")[1]
+                print("Track count: "+self.track_number)
+
 class device_Object(object):
     '''
     Device object
@@ -177,7 +193,7 @@ class main_logging_thread_Class(threading.Thread):
 
             print("[6] Checked for termination")
             #logging.info("logging done!")
-            
+
         print("Printing EOF: " + get_current_timestamp_footer())
         self.write_to_log(get_current_timestamp_footer(),"")
         self.stop()
@@ -228,6 +244,12 @@ def start() :
         message_Logging_Queue.put((app_log_mesg, "Checking DVD devices for discs..."))
         disk_Check_Queue.put(DVD_Device_List)
 
+    #Wait on receving data
+    returned_data = diskCheckResultsQueue.get()
+    #print("Returned data: "+returned_data)
+    newDisc = disc_metaData(returned_data)
+    newDisc.meta_parse(newDisc.raw)
+    diskCheckResultsQueue.task_done()
 '''
     Drive checking thread.
     - Currently this is checking queue of devices.
@@ -302,8 +324,10 @@ class main_drive_check_thread_Class(threading.Thread):
                 main_return_subprocess_thread.subprocess_return_thread.start()
                 result = subprocessResultsQueue.get()
                 subprocessResultsQueue.task_done()
-                print(result)
+                #print(result)
                 message_Logging_Queue.put([make_log_mesg, result])
+                diskCheckResultsQueue.put(result)
+
                 
                 #disk_Check_Queue.task_done()
                 self.stop()
@@ -429,6 +453,8 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
         data = str(result).replace("'","")
         formatted_lines = data.split("\n")
 
+
+
     # Displaying result
     bray_dev = ""
     dvd_dev = ""
@@ -500,6 +526,7 @@ def shutdown():
     subprocessResultsQueue.join()
     subprocessQueue.join()
     disk_Check_Queue.join()
+    diskCheckResultsQueue.join()
     returned_Data_Queue.join()
 
     print("End of program!")

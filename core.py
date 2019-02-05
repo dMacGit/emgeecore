@@ -1,8 +1,7 @@
 from sys import platform
 from pathlib import Path
 
-import os
-import stat
+import datetime
 import subprocess
 from subprocess import Popen, PIPE
 
@@ -64,6 +63,7 @@ print("makeMkv_profile_options",makeMkv_profile_options)
 print("makeMkv_media_dest_dir",makeMkv_media_dest_dir)
 
 
+
 #Command to rip first title on dev:/dev/sr01 using profile
 #makemkvcon --profile=/home/phantom/.MakeMKV/phantoms.mmcp.xml mkv dev:/dev/sr0 0 /media/media/Rips
 
@@ -100,6 +100,11 @@ handbrake_log_mesg = "<<[Handbrake>]> "
 
 SHUTDOWN_TRIGGERED = False
 
+def get_current_timestamp_footer():
+    # End notes on log files upon app exit
+    CURRENT_TIMESTAMP = str(datetime.datetime.now())
+    LOG_FILE_EXIT_FOOTER = "=== Media Grabber (Emgee) application exit @ " + CURRENT_TIMESTAMP + " ==="
+    return LOG_FILE_EXIT_FOOTER
 
 class device_Object(object):
     '''
@@ -169,8 +174,13 @@ class main_logging_thread_Class(threading.Thread):
             if SHUTDOWN_TRIGGERED is True and main_drive_check_thread.is_alive() is not True:
                 self.stop()
                 print("___Logging thread stop triggered!")
+
             print("[6] Checked for termination")
             #logging.info("logging done!")
+            
+        print("Printing EOF: " + get_current_timestamp_footer())
+        self.write_to_log(get_current_timestamp_footer(),"")
+        self.stop()
         print("=>Logging thread End!<=")
     def write_to_log(self, debug_mesg, data):
         '''

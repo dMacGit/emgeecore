@@ -112,16 +112,56 @@ class disc_metaData(object):
 
     def __init__(self, result):
         self.raw = result
-        self.track_number = 0
-        self.tracks = None
+        self.title_tracks_number = 0
+        self.video_tracks = []
+        self.sound_tracks = []
+        self.disc_info = []
+        print(self.raw)
         self.meta_parse(self.raw)
 
-    def meta_parse(self, data):
-        for line in str(data):
-            if line.__contains__("TCOUNT"):
-                self.track_number = line.split(":")[1]
-                print("Track count: "+self.track_number)
 
+    def meta_parse(self, data):
+        split_lines = data.split("\n")
+        # second_split = split_lines[0].split("\\n")
+        line_count = 0
+        current_Track_line = 0
+        current_SoundTrack_line = 0
+        for line in split_lines:
+            # print("{"+str(line_count)+"} "+line)
+            # First check "MSG:" and string "Operation successfully completed"
+            if str(line).__contains__("MSG:") and str(line).__contains__("Operation successfully completed"):
+                # Check trailing TCOUNT line
+                # First saftey check for index out of range
+                if len(split_lines) > line_count + 1:
+                    if str(split_lines[line_count + 1]).__contains__("TCOUNT"):
+                        self.title_tracks_number = str(split_lines[line_count + 1]).split(":")[1]
+                        print(self.title_tracks_number + " Title tracks found")
+                        self.video_tracks = [[None]*100]*int(self.title_tracks_number)
+                        self.sound_tracks = [[[None] * 100] * 100] * int(self.title_tracks_number)
+            elif str(line).__contains__("CINFO:"):
+                self.disc_info.append(line)
+            elif str(line).__contains__("TINFO:"):
+                selected_track_num = str(line).split(":")[1].split(",")[0]
+                if selected_track_num < self.title_tracks_number :
+                    #happy days
+                    self.video_tracks[int(selected_track_num)][current_Track_line] = str(line)
+                    current_Track_line +=1
+            elif str(line).__contains__("SINFO:"):
+                selected_track_num = str(line).split(":")[1].split(",")[0]
+                selected_soundTrack_num = str(line).split(":")[1].split(",")[1]
+                    #happy days
+                self.sound_tracks[int(selected_track_num)][int(selected_soundTrack_num)][current_SoundTrack_line] = str(line)
+                current_SoundTrack_line +=1
+            line_count += 1
+
+    def return_VideoTrackInfo(self):
+        return self.video_tracks
+
+    def return_SoundTrackInfo(self):
+        return self.sound_tracks
+
+    def return_DiskInfo(self):
+        return self.disc_info
 class device_Object(object):
     '''
     Device object
@@ -248,7 +288,7 @@ def start() :
     returned_data = diskCheckResultsQueue.get()
     #print("Returned data: "+returned_data)
     newDisc = disc_metaData(returned_data)
-    newDisc.meta_parse(newDisc.raw)
+    #newDisc.meta_parse(newDisc.raw)
     diskCheckResultsQueue.task_done()
 '''
     Drive checking thread.
@@ -550,9 +590,6 @@ When shutting down:
 - shutdown()
 """
 
-start_app_Threads()
-initialize()
-#Wait for termination
-shutdown()
+
 
 

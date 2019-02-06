@@ -44,4 +44,7 @@ def parse_log_data(data):
 tempObject = core.disc_metaData(open_test_log())
 print(tempObject.return_DiskInfo())
 print(tempObject.return_VideoTrackInfo())
-print(tempObject.return_SoundTrackInfo())
+format_data = tempObject.return_SoundTrackInfo()
+
+for key in format_data.keys():
+    print("[",key,"] ",format_data.get(key))

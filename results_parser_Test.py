@@ -41,10 +41,17 @@ def parse_log_data(data):
 
 #parse_log_data(open_test_log())
 
+
+
 tempObject = core.disc_metaData(open_test_log())
 print(tempObject.return_DiskInfo())
 print(tempObject.return_VideoTrackInfo())
-format_data = tempObject.return_SoundTrackInfo()
+title_objects = tempObject.return_SoundTrackInfo()
 
-for key in format_data.keys():
-    print("[",key,"] ",format_data.get(key))
+for title_key in title_objects.keys():
+    title_sound_tracks = dict(title_objects.get(title_key)).keys()
+    print("[",title_key,"] ")
+    print("--> Sound Tracks:",str(title_sound_tracks))
+    tracks_keys = title_sound_tracks
+    for track in title_sound_tracks:
+        print("{ "+title_key+" } --> Sound Track [ "+track+" ] : ","\n",core.return_str_tracks(dict(title_objects.get(title_key)).get(str(track))))

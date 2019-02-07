@@ -108,6 +108,17 @@ def get_current_timestamp_footer():
     LOG_FILE_EXIT_FOOTER = "=== Media Grabber (Emgee) application exit @ " + CURRENT_TIMESTAMP + " ==="
     return LOG_FILE_EXIT_FOOTER
 
+
+def return_str_tracks(dictionary):
+    titles = dict(dictionary).keys()
+    all_titles_str = ""
+    for title in titles:
+        all_titles_str += title
+        title_value = dict(dictionary).get(title)
+        all_titles_str += "\n "+title_value
+        #sTracks = dict(dictionary).get(title)
+    return all_titles_str
+
 class disc_metaData(object):
 
     def __init__(self, result):
@@ -124,7 +135,7 @@ class disc_metaData(object):
         split_lines = data.split("\n")
         # second_split = split_lines[0].split("\\n")
         line_count = 0
-        previouse_title_track_num = -1
+        previouse_title_track_num = 0
         previouse_sound_track_num = 0
         current_title_number = 0
         current_sound_track_number = 0
@@ -135,6 +146,8 @@ class disc_metaData(object):
         title_track_line_num = 0
         current_sound_line = 0
         max_lines = len(split_lines)
+        grabbed_current_vTrack = False
+        grabbed_current_sTrack = False
 
         for index in range(0,max_lines):
             # print("{"+str(line_count)+"} "+line)
@@ -159,23 +172,30 @@ class disc_metaData(object):
                 debug_count += 1
 
             if str(split_lines[index]).__contains__("TINFO:"):
+                if(grabbed_current_vTrack is True):
+                    grabbed_current_vTrack = False
+                    grabbed_current_sTrack = True
+
                 #check which Title track number / total
                 current_title_number = int(str(split_lines[index]).split(":")[1].split(",")[0])
-                print("Video title track: "+str(current_title_number))
+                #print("Video title track: "+str(current_title_number))
                 if current_title_number < int(self.title_tracks_number):
                     temp_list[str(title_track_line_num)] = str(split_lines[index])
                 title_track_line_num +=1
-                print("Temp video title dict "+str(temp_list))
+                #print("Temp video title dict "+str(temp_list))
 
             if str(split_lines[index]).__contains__("SINFO:"):
+                if grabbed_current_vTrack is False:
+                    grabbed_current_vTrack = True
+                    grabbed_current_sTrack = False
                 print("Video track check for keys in dict")
                 print(self.video_tracks.keys(),self.video_tracks.get("Title:"+str(current_title_number)))
                 if self.video_tracks.keys().__contains__("Title:"+str(current_title_number)) is False:
-                    print("Video track check: no keys in dict!!!!")
+                    #print("Video track check: no keys in dict!!!!")
 
                     self.video_tracks["Title:"+str(current_title_number)] = temp_list.copy()
                     title_track_line_num = 0
-                    previouse_title_track_num = current_title_number
+                    #previouse_title_track_num = current_title_number
                     previouse_sound_track_num = 0
                     print("Output Video tracks: "+str(self.video_tracks))
                     #self.title_tracks_number[current_title_number] = temp_list
@@ -184,18 +204,24 @@ class disc_metaData(object):
                 current_title_number = int(str(line).split(":")[1].split(",")[0])
                 current_sound_track_number = int(str(line).split(":")[1].split(",")[1])
 
-                print(">>>>>>>>>>>>>>>Current title:",current_title_number,"Current sound track number: ",current_sound_track_number)
+                #print(">>>>>>>>>>>>>>>Current title:",current_title_number,"Current sound track number: ",current_sound_track_number)
                 #print("Start tracks array: ",self.sound_tracks)
 
+                print("------ previouse_sound_track_num: ",previouse_sound_track_num," < current_sound_track_number: ",current_sound_track_number)
 
+                print(previouse_title_track_num, " < ", current_title_number)
                 if previouse_sound_track_num < current_sound_track_number:
                     #print(">>>>>>>>>>>>>>>DEBUG Inner title:", current_title_number, "Current sound track number: ",
-                         # current_sound_track_number)
+                     #     current_sound_track_number)
                     if self.sound_tracks.keys().__contains__("Title:"+str(current_title_number)) is False:
-                        #print(">>>>>>>>>>>>>>>DEBUG 1 title:", current_title_number, "Current sound track number: ",
-                          #    current_sound_track_number)
+                        print(">>>>>>>>>>>>>>>DEBUG 1 title:", current_title_number, "Current sound track number: ",
+                              current_sound_track_number)
                         self.sound_tracks["Title:"+str(current_title_number)] = {}
                         self.sound_tracks["Title:"+str(current_title_number)]["Track:"+str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+
+                        print("Testing saved tracks for Title:"+str(current_title_number)+" Tracks "+str(self.sound_tracks.get("Title:"+str(current_title_number)))+"")
+                        #print("Test dictionary polling: " + str(
+                        #    dict(self.sound_tracks.get("Title:" + str(current_title_number))).keys())+" Tracks: "+return_str_tracks(dict(self.sound_tracks.get("Title:" + str(current_title_number)))))
                     #if True:
                     #    print("Test dictionary polling: "+str(dict(self.sound_tracks.get("Title:"+str(current_title_number))).keys()))
                     elif (dict(self.sound_tracks.get("Title:"+str(current_title_number))).keys()).__contains__("Track:"+str(previouse_sound_track_num)) is False:
@@ -203,42 +229,73 @@ class disc_metaData(object):
                               current_sound_track_number)
                         #self.sound_tracks["Title:" + str(current_title_number)] = {}
                         self.sound_tracks["Title:"+str(current_title_number)]["Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+                        #print("Test dictionary polling: " + str(
+                         #   dict(self.sound_tracks.get(
+                          #      "Title:" + str(current_title_number))).keys()) + " Tracks: " + str(
+                           # dict(self.sound_tracks.get("Title:" + str(current_title_number)))))
+                        print("Testing saved tracks for Title:" + str(current_title_number) + " Tracks " + str(
+                            self.sound_tracks.get("Title:" + str(current_title_number))) + "")
                     else :
                         print(">>>>>>>>>>>>>>>DEBUG 3 title:", current_title_number, "Current sound track number: ",
                               current_sound_track_number)
                         self.sound_tracks["Title:" + str(current_title_number)][
                             "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+                        print("Test dictionary polling: " + str(
+                            dict(self.sound_tracks.get("Title:" + str(current_title_number))).keys()))
                         #self.sound_tracks[current_title_number][previouse_sound_track_num] = temp_sound_track_list[::]
                     #print(self.sound_tracks)
-
-                    #self.sound_tracks[current_title_number][previouse_sound_track_num].append(temp_sound_track_list)
 
                     temp_sound_track_list.clear()
                     current_sound_line = 0
                     previouse_sound_track_num = current_sound_track_number
 
-                else:
-                    if current_sound_track_number > 0 and (
-                        str(split_lines[index + 1]).__contains__("") or str(split_lines[index + 1]).__contains__(
-                            "TINFO:")):
-                        #
-                        print("++++" + str(self.sound_tracks.keys()))
-                        if self.sound_tracks.keys().__contains__("Title:" + str(current_title_number)) is False:
-                            print("++ 1 ++")
-                            self.sound_tracks["Title:" + str(current_title_number)][
-                                "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+                elif previouse_title_track_num < current_title_number:
+                    print(">>>>>>>>>>>>>>>TEST DEBUT previouse_title_track_num:", previouse_title_track_num,
+                          "current_title_number: ",
+                          current_title_number)
+                    print(">>>>>>>>>>>>>>>Current sound track number: ",
+                          current_sound_track_number)
+                    self.sound_tracks["Title:" + str(current_title_number)] = {}
+                    self.sound_tracks["Title:" + str(current_title_number)][
+                        "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
 
-                        else:
-                            self.sound_tracks["Title:" + str(current_title_number)][
-                                "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
-                            print("++ 2 ++")
+                    print("Testing saved tracks for Title:" + str(current_title_number) + " Tracks " + str(
+                        self.sound_tracks.get("Title:" + str(current_title_number))) + "")
+                    temp_sound_track_list.clear()
+                    previouse_title_track_num = current_title_number
+
+
+
 
                 temp_sound_track_list[str(current_sound_line)] = str(split_lines[index])
                 current_sound_line += 1
 
-                #print("temp sound lines list: ",temp_sound_track_list)
-                #print("End tracks array: ", self.sound_tracks)
+                    #print("temp sound lines list: ",temp_sound_track_list)
+                    #print("End tracks array: ", self.sound_tracks)
 
+                '''if str(split_lines[index+1]).__contains__("TINFO:") and grabbed_current_sTrack:
+                    self.sound_tracks["Title:" + str(current_title_number-1)][
+                        "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()'''
+
+                    #print()
+                '''if str(split_lines[index]).__contains__("TINFO:") and grabbed_current_sTrack:
+                    self.sound_tracks["Title:" + str(current_title_number-1)][
+                        "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+                    #print("++++" + str(self.sound_tracks.keys()))'''
+                '''if (str(split_lines[index + 1]).__contains__("") or str(split_lines[index + 1]).__contains__(
+                            "TINFO:")):
+                    self.sound_tracks["Title:" + str(current_title_number)][
+                        "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+                    print("++++" + str(self.sound_tracks.keys()))
+                if self.sound_tracks.keys().__contains__("Title:" + str(current_title_number)) is False:
+                    print("++ 1 ++")
+                    self.sound_tracks["Title:" + str(current_title_number)][
+                        "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+
+                else:
+                    self.sound_tracks["Title:" + str(current_title_number)][
+                        "Track:" + str(previouse_sound_track_num)] = temp_sound_track_list.copy()
+                    print("++ 2 ++")'''
             line_count += 1
 
     def return_VideoTrackInfo(self):

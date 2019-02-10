@@ -306,6 +306,136 @@ class disc_metaData(object):
 
     def return_DiskInfo(self):
         return self.disc_info
+
+class disc_metaData_alt(object):
+
+    def __init__(self, result):
+        self.raw = result
+        self.title_tracks_number = 0
+        self.video_tracks = {}
+        self.sound_tracks = {}
+        self.disc_info = []
+        print(self.raw)
+        self.meta_parse(self.raw)
+
+
+    def meta_parse(self, data):
+        temp_vList = {}
+        temp_sList = {}
+        split_lines = data.split("\n")
+        # second_split = split_lines[0].split("\\n")
+        MAX_LINES = len(split_lines)
+        index = 0
+        while index < MAX_LINES:
+            # print("{"+str(line_count)+"} "+line)
+            # First check "MSG:" and string "Operation successfully completed"
+            line = split_lines[index]
+            #print("{ "+str(index)+" }"+line)
+            if str(split_lines[index]).__contains__("MSG:") and str(split_lines[index]).__contains__("Operation successfully completed"):
+                # Check trailing TCOUNT line
+                # First saftey check for index out of range
+
+                #for tcount_start_index in range(index,MAX_LINES):
+                if str(split_lines[index+1]).__contains__("TCOUNT"):
+                    self.title_tracks_number = str(split_lines[index + 1]).split(":")[1]
+                    print(self.title_tracks_number + " Title tracks found")
+                    index += 2
+            #print("Before CINFO parser: "+self.return_DiskInfo())
+            while str(split_lines[index]).__contains__("CINFO:"):
+                #for cIndex in range(index,max_lines):
+
+                #for cinfo_start_index in range(index,MAX_LINES):
+                #if str(split_lines[index+1]).__contains__("CINFO:") is True:
+
+                self.disc_info.append(str(split_lines[index]))
+                index += 1
+
+
+            #print("After CINFO parser: " + self.return_DiskInfo())
+
+            #if str(split_lines[index]).__contains__("TINFO:"):
+            title_track_line_num = 0
+            while str(split_lines[index]).__contains__("TINFO:"):
+                #for cIndex in range(index,max_lines):
+
+                #for cinfo_start_index in range(index,MAX_LINES):
+                #if str(split_lines[index+1]).__contains__("CINFO:") is True:
+
+                current_title_number = int(str(split_lines[index]).split(":")[1].split(",")[0])
+                # print("Video title track: "+str(current_title_number))
+                if current_title_number < int(self.title_tracks_number):
+                    temp_vList[str(title_track_line_num)] = str(split_lines[index])
+                title_track_line_num += 1
+                index += 1
+                if str(split_lines[index]).__contains__("TINFO:") is not True:
+                    self.video_tracks["Title:"+str(current_title_number)] = temp_vList.copy()
+                    temp_vList.clear()
+
+            sound_title_track_line_num = 0
+            prev_sound_line_num = sound_title_track_line_num
+            previouse_sound_track_num = 0
+            previouse_sound_title_num = 0
+
+            while str(split_lines[index]).__contains__("SINFO:"):
+                # for cIndex in range(index,max_lines):
+
+                # for cinfo_start_index in range(index,MAX_LINES):
+                # if str(split_lines[index+1]).__contains__("CINFO:") is True:
+
+                current_sound_title_number = int(str(split_lines[index]).split(":")[1].split(",")[0])
+                current_sound_track_number = int(str(split_lines[index]).split(":")[1].split(",")[1])
+                #print("New line: "+str(split_lines[index]))
+                while str(split_lines[index]).__contains__(":"+str(current_sound_title_number)+","+str(current_sound_track_number)) is True:
+                    #Add to track dictionary.
+                    #print("New line being added: ")
+                    temp_sList[str(sound_title_track_line_num)] = str(split_lines[index])
+                    #print("Line: "+str(sound_title_track_line_num)+" = "+str(temp_sList))
+                    index += 1
+                    sound_title_track_line_num += 1
+
+                if self.sound_tracks.keys().__contains__("Title:" + str(current_sound_title_number)) is not True:
+
+                    self.sound_tracks["Title:" + str(current_sound_title_number)] = {}
+                    if dict(self.sound_tracks.get("Title:" + str(current_sound_title_number))).keys().__contains__("Track:" + str(current_sound_track_number)) is not True:
+                        self.sound_tracks["Title:" + str(current_sound_title_number)][
+                            "Track:" + str(current_sound_track_number)] = {}
+                        self.sound_tracks["Title:" + str(current_sound_title_number)][
+                            "Track:" + str(current_sound_track_number)] = temp_sList.copy()
+                    else :
+                        self.sound_tracks["Title:" + str(current_sound_title_number)]["Track:" + str(current_sound_track_number)] = temp_sList.copy()
+                    sound_title_track_line_num = 0
+                    temp_sList.clear()
+                    previouse_sound_track_num = current_sound_title_number
+
+                else :
+                    self.sound_tracks["Title:" + str(current_sound_title_number)][
+                        "Track:" + str(current_sound_track_number)] = temp_sList.copy()
+                    sound_title_track_line_num = 0
+                    temp_sList.clear()
+
+            index += 1
+
+
+    def return_VideoTrackInfo(self):
+        returned_title_string = "\n\nTINFO objects: \n\n"+str(self.video_tracks.keys())
+        for key in self.video_tracks.keys():
+            returned_title_string += "\n" + str(self.video_tracks.get(key))
+        return returned_title_string
+
+    def return_SoundTrackInfo(self):
+        returned_sound_track_string = "\n\nSINFO objects: \n\n" + str(self.sound_tracks.keys())
+        for key in self.sound_tracks.keys():
+            returned_sound_track_string += "\n"+key
+            for item in dict(self.sound_tracks.get(key)).keys():
+                returned_sound_track_string += "\n-Track: "+str(item)+"\n"+str(dict(self.sound_tracks.get(key)).get(item))
+        return returned_sound_track_string
+
+    def return_DiskInfo(self):
+        returned_string = "\n\nCINFO object:\n\n"
+        for item in self.disc_info:
+            returned_string += "\n"+str(item)
+        return returned_string
+
 class device_Object(object):
     '''
     Device object

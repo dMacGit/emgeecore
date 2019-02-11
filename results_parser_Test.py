@@ -25,10 +25,8 @@ def parse_log_data(data):
     print("=" * 20)
 
     split_lines = data.split("\n")
-    #second_split = split_lines[0].split("\\n")
     line_count = 0
     for line in split_lines:
-        #print("{"+str(line_count)+"} "+line)
         #First check "MSG:" and string "Operation successfully completed"
         if str(line).__contains__("MSG:") and str(line).__contains__("Operation successfully completed"):
             #Check trailing TCOUNT line
@@ -39,21 +37,11 @@ def parse_log_data(data):
                     print(track_number+" Title tracks found")
         line_count += 1
 
-#parse_log_data(open_test_log())
 
 
 
-tempObject = core.disc_metaData_alt(open_test_log())
+
+tempObject = core.disc_metaData(open_test_log())
 print(tempObject.return_DiskInfo())
 print(tempObject.return_VideoTrackInfo())
 print(tempObject.return_SoundTrackInfo())
-
-'''
-for title_key in title_objects.keys():
-    title_sound_tracks = dict(title_objects.get(title_key)).keys()
-    print("[",title_key,"] ")
-    print("--> Sound Tracks:",str(title_sound_tracks))
-    tracks_keys = title_sound_tracks
-    for track in title_sound_tracks:
-        print("{ "+title_key+" } --> Sound Track [ "+track+" ] : ","\n",core.return_str_tracks(dict(title_objects.get(title_key)).get(str(track))))
-'''

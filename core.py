@@ -149,6 +149,9 @@ class disc_metaData(object):
                 index += 1
 
             title_track_line_num = 0
+            current_title_number = 0
+            if str(split_lines[index]).__contains__("INFO:"):
+                print("Pre_check:"+str(split_lines[index]))
 
             while str(split_lines[index]).__contains__("TINFO:"):
                 #for cIndex in range(index,max_lines):
@@ -156,20 +159,26 @@ class disc_metaData(object):
                 #for cinfo_start_index in range(index,MAX_LINES):
 
                 current_title_number = int(str(split_lines[index]).split(":")[1].split(",")[0])
+                print(str(split_lines[index]))
                 # print("Video title track: "+str(current_title_number))
-                if current_title_number < int(self.title_tracks_number):
-                    temp_vList[str(title_track_line_num)] = str(split_lines[index])
+                #while str(split_lines[index]).__contains__("TINFO:" + str(current_title_number)) is True:
+                temp_vList[str(title_track_line_num)] = str(split_lines[index])
                 title_track_line_num += 1
                 index += 1
-                if str(split_lines[index]).__contains__("TINFO:") is not True:
+                '''if current_title_number < int(self.title_tracks_number):
+                    temp_vList[str(title_track_line_num)] = str(split_lines[index])
+                title_track_line_num += 1'''
+
+                '''if str(split_lines[index+1]).__contains__("TINFO:") is not True:
                     self.video_tracks["Title:"+str(current_title_number)] = temp_vList.copy()
+                
+                    '''
+                if str(split_lines[index]).__contains__("TINFO:") is not True:
+                    self.video_tracks["Title:" + str(current_title_number)] = temp_vList.copy()
                     temp_vList.clear()
+                    title_track_line_num = 0
 
             sound_title_track_line_num = 0
-            prev_sound_line_num = sound_title_track_line_num
-            previouse_sound_track_num = 0
-            previouse_sound_title_num = 0
-
             while str(split_lines[index]).__contains__("SINFO:"):
 
                 current_sound_title_number = int(str(split_lines[index]).split(":")[1].split(",")[0])
@@ -199,13 +208,21 @@ class disc_metaData(object):
                     sound_title_track_line_num = 0
                     temp_sList.clear()
 
-            index += 1
+
+            if str(split_lines[index]).__contains__("TINFO:"):
+                continue
+            else :
+                index += 1
 
     def return_VideoTrackInfo(self):
+
         returned_title_string = "\n\nTINFO objects: \n\n"+str(self.video_tracks.keys())
         for key in self.video_tracks.keys():
             returned_title_string += "\n" + str(self.video_tracks.get(key))
         return returned_title_string
+
+    def return_VideoTrackObject(self):
+        return self.video_tracks
 
     def return_SoundTrackInfo(self):
         returned_sound_track_string = "\n\nSINFO objects: \n\n" + str(self.sound_tracks.keys())
@@ -252,6 +269,85 @@ class device_Object(object):
         '''
         returned_value = "" + self.driveID + "," + self.deviceName + "," + self.devicePath
         return returned_value
+
+
+def grab_largest_titles_Size(titles_list):
+    #Using a selection sort algorithm.
+    #No need for super efficient algorithm. Only will contain max of 100 titles (Rarely)
+    titlesList = dict(titles_list).copy()
+    return_summary_list = [None]*dict(titlesList).__sizeof__()
+    for title_index in range(len(titlesList)):
+        minimum = title_index
+
+        for compared_title_index in range(title_index + 1, len(titlesList)):
+            # Select the smallest value
+            #Need to compare 3rd index value of Title object, for the GB/MB size of each title
+            print("Testing iteration: "+str(titlesList))
+            print(str(dict(titlesList.get("Title:"+str(compared_title_index)))))
+
+            comp_line_index = 0
+            print(str(dict(titlesList.get("Title:" + str(compared_title_index))).get(str(comp_line_index))))
+            min_lin_index = 0
+            for comp_key in dict(titlesList.get("Title:"+str(compared_title_index))).keys():
+                line = dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_key)
+                if (str(line).__contains__("GB") is False) and (str(line).__contains__("MB") is False):
+                    comp_line_index += 1
+                else :
+                    print("line contains GB or MB: " + str(line))
+                    break
+            for min_key in dict(titlesList.get("Title:"+str(minimum))).keys():
+                line_min = dict(titlesList.get("Title:" + str(compared_title_index))).get(min_key)
+                if (str(line_min).__contains__("GB") is False) and (str(line_min).__contains__("MB") is False):
+                    min_lin_index += 1
+
+                else :
+                    print("lin_min contains GB or MB: "+str(line_min))
+                    break
+
+            '''
+                temp_vList[str(title_track_line_num)] = str(split_lines[index])
+            '''
+            '''print("Testing chars vs chars: "+str(str(comp_line_index)))
+            print("Testing chars vs chars: "+str(comp_line_index))
+            print("testing compare: " + str(dict(titlesList.get("Title:" + str(compared_title_index))).get(str(comp_line_index))) + "\n VS \n" + str(
+                dict(titlesList.get("Title:" + str(minimum))).get('"'+str(min_lin_index)+'"')))
+            #print('"'+str(comp_line_index)+'"')'''
+            print("+++++ "+str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index))+" ++++++++")
+            if (str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).__contains__("GB") is True) and (str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).__contains__("GB") is True) :
+                format_compare_size = str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).split(",")[3].replace('"',"")
+                format_compare_size = format_compare_size.replace("GB","").replace(" ","")
+                format_min_size = str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).split(",")[3].replace('"',"")
+                format_min_size = format_min_size.replace("GB","").replace(" ","")
+                if format_compare_size < format_min_size :
+                    minimum = compared_title_index
+
+            elif (str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).__contains__("MB") is True) and (str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).__contains__("MB") is True) :
+                format_compare_size = str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).split(",")[3].replace('"',"")
+                format_compare_size = format_compare_size.replace("MB","").replace(" ","")
+                format_min_size = str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).split(",")[3].replace('"',"")
+                format_min_size = format_min_size.replace("MB","").replace(" ","")
+                if format_compare_size < format_min_size :
+                    minimum = compared_title_index
+
+            elif (str(dict(titlesList.get("Title:" + str(compared_title_index))).get(comp_line_index)).__contains__(
+                        "MB") is True) and (
+                    str(dict(titlesList.get("Title:" + str(minimum))).get(min_lin_index)).__contains__("GB") is True):
+                minimum = compared_title_index
+
+        # Place it at the front of the
+        # sorted end of the array
+
+        return_summary_list[minimum] = str(titlesList.get("Title:"+str(compared_title_index)))
+        return_summary_list[compared_title_index] = str(titlesList.get("Title:"+str(minimum)))
+
+    return return_summary_list
+
+def print_Tracks_Array(titles_array):
+    returned_title_string = "\n\nTINFO objects: \n\n"+str(titles_array)
+    for key in titles_array:
+        print("Test key: "+str(key))
+        returned_title_string += "\n" + str(titles_array[key])
+    return returned_title_string
 
 class main_logging_thread_Class(threading.Thread):
     def __init__(self):

@@ -275,6 +275,47 @@ def grab_largest_titles_Size(titles_list):
     #Using a selection sort algorithm.
     #No need for super efficient algorithm. Only will contain max of 100 titles (Rarely)
     titlesList = dict(titles_list).copy()
+    '''
+    titlesList structure:
+    
+    titlesList { 'Title:#1' :  
+                    
+                            { 'line:#1' : line_data,
+                              'line:#2' : line_data,
+                              'line:#3' : line_data,
+                              'line:#n' : line_data,
+                             } ,
+                      
+                            { 'line:#1' : line_data,
+                              'line:#2' : line_data,
+                              'line:#3' : line_data,
+                              'line:#n' : line_data,
+                             } ,
+                    } ,
+                  'Title:#2' :  
+                    
+                            { 'line:#1' : line_data,
+                              'line:#2' : line_data,
+                              'line:#3' : line_data,
+                              'line:#n' : line_data,
+                             } ,
+                       
+                            { 'line:#1' : line_data,
+                              'line:#2' : line_data,
+                              'line:#3' : line_data,
+                              'line:#n' : line_data,
+                             } ,
+                    } ,
+                }
+    #To iterate over Line# and line data per Track in each title:
+    titles_list.get("title#") returns title dict {}
+    titles_list.get("title#").keys() returns list of keys for Tracks in title.
+    titles_list.get("title#").get("Track#) returns dict of lines for track.
+    titles_list.get("title#").get("Track#).iterator
+    
+    '''
+
+
     return_summary_list = [None]*dict(titlesList).__sizeof__()
     for title_index in range(len(titlesList)):
         minimum = title_index
@@ -296,7 +337,7 @@ def grab_largest_titles_Size(titles_list):
                     print("line contains GB or MB: " + str(line))
                     break
             for min_key in dict(titlesList.get("Title:"+str(minimum))).keys():
-                line_min = dict(titlesList.get("Title:" + str(compared_title_index))).get(min_key)
+                line_min = dict(titlesList.get("Title:" + str(minimum))).get(min_key)
                 if (str(line_min).__contains__("GB") is False) and (str(line_min).__contains__("MB") is False):
                     min_lin_index += 1
 
@@ -342,11 +383,11 @@ def grab_largest_titles_Size(titles_list):
 
     return return_summary_list
 
-def print_Tracks_Array(titles_array):
+def print_Tracks_Array(ordered_titles):
+    titles_array = list(ordered_titles).copy()
     returned_title_string = "\n\nTINFO objects: \n\n"+str(titles_array)
-    for key in titles_array:
-        print("Test key: "+str(key))
-        returned_title_string += "\n" + str(titles_array[key])
+    for index in range(0,len(titles_array)):
+        returned_title_string += "\n" + str(titles_array[index])
     return returned_title_string
 
 class main_logging_thread_Class(threading.Thread):

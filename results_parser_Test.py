@@ -1,6 +1,13 @@
 import core
 import os
 
+'''
+    This Results_parser_Test.py class is used to debug/test the core.py code
+    without running the entire application.
+    
+    Results_parser_Test.py will not be part of the Front end. 
+'''
+
 # While still testing named "test.log. Change to "makemkvcon.log" later
 output_file_name = 'test.log'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -36,10 +43,6 @@ def parse_log_data(data):
                     track_number = str(split_lines[line_count+1]).split(":")[1]
                     print(track_number+" Title tracks found")
         line_count += 1
-
-
-
-
 
 tempObject = core.disc_metaData(open_test_log())
 print(tempObject.return_DiskInfo())

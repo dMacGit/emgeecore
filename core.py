@@ -572,37 +572,6 @@ class main_drive_check_thread_Class(threading.Thread):
         print("=>Return drive check thread End!<=")
         #[Above was commented out to here]
 
-"""
-def check_for_disks(devices_to_check):
-    #starting search for movies/episodes
-    
-    #Running command on selected/found drives.
-    #"makemkvcon -r --cache=1 info dev:/dev/sr1" Example
-    
-    message_Logging_Queue.put((app_log_mesg, "Devices to check... "+str(devices_to_check)))
-    print("checking devices {}", devices_to_check)
-    for device in devices_to_check :
-        #Running through devices to find discs
-        device_value = devices_to_check[device]
-        message_Logging_Queue.put((app_log_mesg, "Checking device... " + str(device_value)))
-        print("checking disk/drive {}",device_value)
-        check_for_disk_command = ['blkid',''+device_value.devicePath.replace("\"","")]
-        message_Logging_Queue.put((app_log_mesg, "Running command ... " + str(check_for_disk_command)))
-        disk_check_first = subprocessQueue.put(check_for_disk_command)
-        #disk_check_echo = run_subprocess_command(['echo','$?'])
-        returnCode = disk_check_first[1]
-        print(check_for_disk_command,"returned:",disk_check_first[1])
-        #If disc detected get info
-        # No disk[2] > 0 error.
-        if int(returnCode) > 0:
-            pass
-        elif returnCode is 0:
-            make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info', 'dev:'+device_value.devicePath.replace("\"","")]
-            print("Make run command on dev: test path: "+make_disco_info_command[-1])
-            result = run_subprocess_command(make_disco_info_command)[0]
-            message_Logging_Queue.put((make_log_mesg,result))"""
-
-
 def clear_test_log () :
 
     with open(output_file_path + output_file_name, 'w') as f :
@@ -624,8 +593,6 @@ class main_return_subprocess_thread_Class(threading.Thread):
        return self._stop.isSet()
 
    def run(self):
-
-
        process = subprocessReturnQueue.get()
        p = subprocess.Popen(process, stdout=PIPE)
        #while p.returncode is None:
@@ -746,10 +713,7 @@ def shutdown():
             main_logging_thread.stop()
             message_Logging_Queue.put("Terminating logging queue")
 
-
-
     print("finished waiting on main_logging thread! Is not not alive")
-
 
     """
             Post run cleanup

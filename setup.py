@@ -5,7 +5,7 @@ with open("README.md","r") as fr:
 
 setuptools.setup(
 
-    name="emgee-core-dmacgit",
+    name="emgee_core",
     version="0.0.1",
     author="dMacGit",
     author_email="d.g.mcindoe@gmail.com",

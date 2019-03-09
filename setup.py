@@ -12,7 +12,7 @@ setuptools.setup(
     description="Core logic for emgee (Media Grabber) application",
     long_description=full_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/dMacGit/emgee_core",
+    url="https://github.com/dMacGit/emgeecore",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

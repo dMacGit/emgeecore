@@ -5,14 +5,14 @@ with open("README.md","r") as fr:
 
 setuptools.setup(
 
-    name="emgee-core-dmacgit",
+    name="emgeecore",
     version="0.0.1",
     author="dMacGit",
     author_email="d.g.mcindoe@gmail.com",
     description="Core logic for emgee (Media Grabber) application",
     long_description=full_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/dMacGit/emgee_core",
+    url="https://github.com/dMacGit/emgeecore",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

@@ -316,72 +316,56 @@ def grab_largest_titles_Size(titles_list):
     '''
 
 
-    return_summary_list = [None]*dict(titlesList).__sizeof__()
+    return_summary_dict = {}
+
+    #Find file size parameter
+    # Note: is around the 10th line description loop through and grab correct lines
+
     for title_index in range(len(titlesList)):
-        minimum = title_index
+        temp_Title_object = titlesList.get("Title:"+str(title_index))
+        # Next need to loop through the titles dict/array and find example: 'TINFO:0,10,0,"4.1 GB"'
+        # Note: this looks to be the 2-3 index, under line marked 'TINFO:x,10,x ; "value"'
+        #print(str(temp_Title_object))
+        for internal_title_index in range(len(temp_Title_object)):
+            track_size = str(dict(temp_Title_object).get(str(internal_title_index))).split(",")[3]
+            if track_size.__contains__("GB") or track_size.__contains__("MB"):
+                #remove other characters
+                track_size = track_size.replace('"',"").replace("\'","").replace(" ","")
+                #WE found it!
+                if track_size.__contains__("GB"):
+                    print("Before: "+track_size)
+                    track_size = track_size.replace("GB","")
+                    print("After: " + track_size)
+                    track_size_float = float(track_size)*1000
+                elif track_size.__contains__("MB"):
+                    print("Before: " + track_size)
+                    track_size = track_size.replace("MB", "")
+                    print("After: " + track_size)
+                    track_size_float = float(track_size)
+                return_summary_dict[title_index] = track_size_float
+                print("Title: "+str(title_index)+" Line "+str(internal_title_index),dict(temp_Title_object).get(str(internal_title_index))," Found size: "+str(track_size_float))
+                track_size_float = 0
+            
 
-        for compared_title_index in range(title_index + 1, len(titlesList)):
-            # Select the smallest value
-            #Need to compare 3rd index value of Title object, for the GB/MB size of each title
-            print("Testing iteration: "+str(titlesList))
-            print(str(dict(titlesList.get("Title:"+str(compared_title_index)))))
+        #return_summary_dict[title_index] = titlesList
 
-            comp_line_index = 0
-            print(str(dict(titlesList.get("Title:" + str(compared_title_index))).get(str(comp_line_index))))
-            min_lin_index = 0
-            for comp_key in dict(titlesList.get("Title:"+str(compared_title_index))).keys():
-                line = dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_key)
-                if (str(line).__contains__("GB") is False) and (str(line).__contains__("MB") is False):
-                    comp_line_index += 1
-                else :
-                    print("line contains GB or MB: " + str(line))
-                    break
-            for min_key in dict(titlesList.get("Title:"+str(minimum))).keys():
-                line_min = dict(titlesList.get("Title:" + str(minimum))).get(min_key)
-                if (str(line_min).__contains__("GB") is False) and (str(line_min).__contains__("MB") is False):
-                    min_lin_index += 1
+        temp_Title_object = ""
 
-                else :
-                    print("lin_min contains GB or MB: "+str(line_min))
-                    break
+    '''for title_index in range(len(titlesList)):
+        return_summary_dict[title_index] = titlesList
+        print("TODO")'''
 
-            '''
-                temp_vList[str(title_track_line_num)] = str(split_lines[index])
-            '''
-            '''print("Testing chars vs chars: "+str(str(comp_line_index)))
-            print("Testing chars vs chars: "+str(comp_line_index))
-            print("testing compare: " + str(dict(titlesList.get("Title:" + str(compared_title_index))).get(str(comp_line_index))) + "\n VS \n" + str(
-                dict(titlesList.get("Title:" + str(minimum))).get('"'+str(min_lin_index)+'"')))
-            #print('"'+str(comp_line_index)+'"')'''
-            print("+++++ "+str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index))+" ++++++++")
-            if (str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).__contains__("GB") is True) and (str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).__contains__("GB") is True) :
-                format_compare_size = str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).split(",")[3].replace('"',"")
-                format_compare_size = format_compare_size.replace("GB","").replace(" ","")
-                format_min_size = str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).split(",")[3].replace('"',"")
-                format_min_size = format_min_size.replace("GB","").replace(" ","")
-                if format_compare_size < format_min_size :
-                    minimum = compared_title_index
 
-            elif (str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).__contains__("MB") is True) and (str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).__contains__("MB") is True) :
-                format_compare_size = str(dict(titlesList.get("Title:"+str(compared_title_index))).get(comp_line_index)).split(",")[3].replace('"',"")
-                format_compare_size = format_compare_size.replace("MB","").replace(" ","")
-                format_min_size = str(dict(titlesList.get("Title:"+str(minimum))).get(min_lin_index)).split(",")[3].replace('"',"")
-                format_min_size = format_min_size.replace("MB","").replace(" ","")
-                if format_compare_size < format_min_size :
-                    minimum = compared_title_index
+    return return_summary_dict
 
-            elif (str(dict(titlesList.get("Title:" + str(compared_title_index))).get(comp_line_index)).__contains__(
-                        "MB") is True) and (
-                    str(dict(titlesList.get("Title:" + str(minimum))).get(min_lin_index)).__contains__("GB") is True):
-                minimum = compared_title_index
+def order_largest_tracks(data_dictionary):
+    '''Dictionary structured:
+        { track# 0: file_size, track# 1: file_size, .... track# n+1: file_size }
+    '''
+    return_ordered_dictionary = dict(data_dictionary).copy()
 
-        # Place it at the front of the
-        # sorted end of the array
 
-        return_summary_list[minimum] = str(titlesList.get("Title:"+str(compared_title_index)))
-        return_summary_list[compared_title_index] = str(titlesList.get("Title:"+str(minimum)))
-
-    return return_summary_list
+    return sorted(return_ordered_dictionary, key=return_ordered_dictionary.get, reverse=True)
 
 def print_Tracks_Array(ordered_titles):
     titles_array = list(ordered_titles).copy()

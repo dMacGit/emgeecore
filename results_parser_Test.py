@@ -49,6 +49,7 @@ print(tempObject.return_DiskInfo())
 print(tempObject.return_VideoTrackInfo())
 print(tempObject.return_SoundTrackInfo())
 
-#print(core.grab_largest_titles_Size(tempObject.return_VideoTrackObject()))
-
+size_dict = core.grab_largest_titles_Size(tempObject.return_VideoTrackObject())
+print(size_dict)
+print("Ordered tracks: "+str(core.order_largest_tracks(size_dict)))
 #print(core.print_Tracks_Array(core.grab_largest_titles_Size(tempObject.return_VideoTrackObject())))

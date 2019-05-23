@@ -1,3 +1,4 @@
 .idea/
 logs/
+private_data/
 __pycache__/

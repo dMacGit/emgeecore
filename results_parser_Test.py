@@ -1,3 +1,4 @@
+import meta_search
 import core
 import os
 
@@ -52,4 +53,6 @@ print(tempObject.return_SoundTrackInfo())
 size_dict = core.grab_largest_titles_Size(tempObject.return_VideoTrackObject())
 print(size_dict)
 print("Ordered tracks: "+str(core.order_largest_tracks(size_dict)))
+print(meta_search.imdb_search("ant man"))
 #print(core.print_Tracks_Array(core.grab_largest_titles_Size(tempObject.return_VideoTrackObject())))
+#print("Largest title is",str(tempObject.return_VideoTrackObject().get("0")))

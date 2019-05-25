@@ -3,6 +3,7 @@ from pathlib import Path
 from threading import Thread
 from queue import Queue
 from subprocess import Popen, PIPE
+from enum import Enum
 
 import threading
 import datetime
@@ -114,14 +115,108 @@ def return_str_tracks(dictionary):
 
 class disc_metaData(object):
 
+    MEDIA_TYPE = ["Blu-ray disc","DVD","CD"]
+    MEDIA_CONTENT = ["MOVIE","TV","MUSIC", "OTHER"]
+    class MEDIA_TYPE(Enum):
+        BR = "Blu-ray disc"
+        DVD = "DVD"
+        CD = "CD"
+
+    class CINFO_INDEX(Enum):
+        Media_Type = 1
+        Media_Title = 2
+        Media_Lang = 28
+        Media_Lang_Name = 29
+        Media_Title_Name = 30
+
+    class TINFO_INDEX(Enum):
+        Track_Title = 2
+        Track_Chapters = 8
+        Track_length = 9
+        Track_file_size = 10
+        Track_file_name = 27
+        Track_Lang = 28
+        Track_Lang_Name = 29
+
     def __init__(self, result):
+        self.MediaType_Found = False
         self.raw = result
         self.title_tracks_number = 0
         self.video_tracks = {}
         self.sound_tracks = {}
-        self.disc_info = []
+        self.disc_info_raw = []
+        self.media_type = ""
+        self.movie_name = ""
+        self.series_name = ""
+        #Disc meta data
+        self.name = ""
+        self.lang = ""
+        #Below for Movie meta data
+        self.movie_durration = ""
+        self.movie_length = ""
+        self.movie_chapters = ""
+        self.movie_size = ""
+        self.movie_file_name = ""
+        self.movie_main_lang = ""
         print(self.raw)
         self.meta_parse(self.raw)
+
+    def get_movie_Name(self):
+        return self.movie_name
+
+    def get_movie_Chapters(self):
+        return self.movie_chapters
+
+    def get_movie_Length(self):
+        return self.movie_length
+
+    def get_movie_Size(self):
+        return self.movie_size
+
+    def get_movie_File_Name(self):
+        return self.movie_file_name
+
+    def get_movie_Lang(self):
+        return self.movie_main_lang
+
+    def get_Media_Type(self):
+        print("Media type found to be:",str(self.media_type))
+        return self.media_type
+
+    def update_Main_Title(self, title_num):
+        line_count = 0
+        track_lines = dict(self.return_VideoTrackObject().get("Title:" + title_num)).values()
+        for line in track_lines:
+            #print("line_count:",line_count,line)
+            index_value = int(str(line).split(':')[1].split(',')[1])
+            meta_value = str(line).split(',')[-1]
+            #print(">>>>>>>> index_value:",index_value,"meta_value:",meta_value)
+
+            if int(index_value) is int(self.TINFO_INDEX.Track_Title.value):
+                self.movie_name = meta_value.replace('"', '')
+                print("Movie name:", self.movie_name)
+
+            elif int(index_value) is int(self.TINFO_INDEX.Track_Chapters.value):
+                self.movie_chapters = meta_value.replace('"', '')
+                print("Movie chapters:", self.movie_chapters)
+
+            elif int(index_value) is int(self.TINFO_INDEX.Track_length.value):
+                self.movie_length = meta_value.replace('"', '')
+                print("Movie length:", self.movie_length)
+
+            elif int(index_value) is int(self.TINFO_INDEX.Track_file_size.value):
+                self.movie_size = meta_value.replace('"', '')
+                print("Movie file size:", self.movie_size)
+
+            elif int(index_value) is int(self.TINFO_INDEX.Track_file_name.value):
+                self.movie_file_name = meta_value.replace('"', '')
+                print("Movie file name:", self.movie_file_name)
+
+            elif int(index_value) is int(self.TINFO_INDEX.Track_Lang.value):
+                self.movie_main_lang = meta_value.replace('"', '')
+                print("Movie lang:", self.movie_main_lang)
+
+            line_count += 1
 
 
     def meta_parse(self, data):
@@ -145,7 +240,31 @@ class disc_metaData(object):
                     index += 2
 
             while str(split_lines[index]).__contains__("CINFO:"):
-                self.disc_info.append(str(split_lines[index]))
+                index_value = int(str(split_lines[index]).split(':')[1].split(',')[0])
+                meta_value = str(split_lines[index]).split(',')[-1]
+                #print(">>>>>>>> index_value:",index_value,"meta_value:",meta_value)
+                if int(index_value) is int(self.CINFO_INDEX.Media_Type.value):
+                    if meta_value.__contains__(str(self.MEDIA_TYPE.BR.value)):
+                        print("Detected media type!!!!")
+                        self.media_type = str(self.MEDIA_TYPE.BR.name).replace('"','')
+                        self.MediaType_Found = True
+
+                if int(index_value) is int(self.CINFO_INDEX.Media_Title.value):
+                    self.name = meta_value.replace('"','')
+                    print("Disc name:",self.name)
+                elif int(index_value) is int(self.CINFO_INDEX.Media_Lang.value):
+                    self.lang = meta_value.replace('"','')
+                    print("Disc main lang:",self.lang)
+
+
+                '''if str(split_lines[index]).__contains__(str(self.MEDIA_TYPE.BR.value)):
+                    print("Detected media type!!!!")
+                    self.media_type = str(self.MEDIA_TYPE.BR.name)
+                    self.MediaType_Found = True'''
+
+                #if str(split_lines[index]).__contains__(str(self.MEDIA_TYPE.BR.value)):
+
+                self.disc_info_raw.append(str(split_lines[index]))
                 index += 1
 
             title_track_line_num = 0
@@ -234,7 +353,7 @@ class disc_metaData(object):
 
     def return_DiskInfo(self):
         returned_string = "\n\nCINFO object:\n\n"
-        for item in self.disc_info:
+        for item in self.disc_info_raw:
             returned_string += "\n"+str(item)
         return returned_string
 

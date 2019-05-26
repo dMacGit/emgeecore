@@ -142,6 +142,7 @@ class disc_metaData(object):
         self.MediaType_Found = False
         self.raw = result
         self.title_tracks_number = 0
+        self.main_title_index = -1
         self.video_tracks = {}
         self.sound_tracks = {}
         self.disc_info_raw = []
@@ -160,6 +161,12 @@ class disc_metaData(object):
         self.movie_main_lang = ""
         print(self.raw)
         self.meta_parse(self.raw)
+
+    def get_All_Movie_sTracks(self):
+        if self.main_title_index is not -1:
+            return self.sound_tracks.get("Title:"+str(self.main_title_index))
+        raise ValueError("The Main Title has not been set!",str(self.main_title_index))
+
 
     def get_movie_Name(self):
         return self.movie_name
@@ -184,8 +191,9 @@ class disc_metaData(object):
         return self.media_type
 
     def update_Main_Title(self, title_num):
+        self.main_title_index = title_num
         line_count = 0
-        track_lines = dict(self.return_VideoTrackObject().get("Title:" + title_num)).values()
+        track_lines = dict(self.get_VideoTrackObject().get("Title:" + title_num)).values()
         for line in track_lines:
             #print("line_count:",line_count,line)
             index_value = int(str(line).split(':')[1].split(',')[1])
@@ -333,17 +341,17 @@ class disc_metaData(object):
             else :
                 index += 1
 
-    def return_VideoTrackInfo(self):
+    def print_VideoTrackInfo(self):
 
         returned_title_string = "\n\nTINFO objects: \n\n"+str(self.video_tracks.keys())
         for key in self.video_tracks.keys():
             returned_title_string += "\n" + str(self.video_tracks.get(key))
         return returned_title_string
 
-    def return_VideoTrackObject(self):
+    def get_VideoTrackObject(self):
         return self.video_tracks
 
-    def return_SoundTrackInfo(self):
+    def print_SoundTrackInfo(self):
         returned_sound_track_string = "\n\nSINFO objects: \n\n" + str(self.sound_tracks.keys())
         for key in self.sound_tracks.keys():
             returned_sound_track_string += "\n"+key
@@ -351,7 +359,23 @@ class disc_metaData(object):
                 returned_sound_track_string += "\n-Track: "+str(item)+"\n"+str(dict(self.sound_tracks.get(key)).get(item))
         return returned_sound_track_string
 
-    def return_DiskInfo(self):
+    def print_Main_Title_SoundTracksInfo_Summary(self):
+        if self.main_title_index is -1:
+            raise ValueError("The Main Title has not been set!",str(self.main_title_index))
+        titleIndex = "Title:"+str(self.main_title_index)
+        returned_sound_track_string = "\n"+titleIndex+"\n"+"Sound Tracks: "+str(dict(self.sound_tracks.get(titleIndex)).keys())
+        return returned_sound_track_string
+
+    def print_Main_Title_SoundTracksInfo(self):
+        if self.main_title_index is -1:
+            raise ValueError("The Main Title has not been set!",str(self.main_title_index))
+        titleIndex = "Title:"+str(self.main_title_index)
+        returned_sound_track_string = "\n"+titleIndex
+        for item in dict(self.sound_tracks.get(titleIndex)).keys():
+            returned_sound_track_string += "\n-Track: "+str(item)+"\n"+str(dict(self.sound_tracks.get(titleIndex)).get(item))
+        return returned_sound_track_string
+
+    def print_DiskInfo(self):
         returned_string = "\n\nCINFO object:\n\n"
         for item in self.disc_info_raw:
             returned_string += "\n"+str(item)

@@ -47,16 +47,16 @@ def parse_log_data(data):
 
 tempObject = core.disc_metaData(open_test_log())
 print("===Media Type confirmed: ",tempObject.get_Media_Type(),"===")
-#print(tempObject.return_DiskInfo())
-#print(tempObject.return_VideoTrackInfo())
-#print(tempObject.return_SoundTrackInfo())
+#print(tempObject.print_DiskInfo())
+#print(tempObject.print_VideoTrackInfo())
+print(tempObject.print_SoundTrackInfo())
 
-size_dict = core.grab_largest_titles_Size(tempObject.return_VideoTrackObject())
+size_dict = core.grab_largest_titles_Size(tempObject.get_VideoTrackObject())
 '''
-Need to use tempObject.return_VideoTrackObject() to return list, then grab resutling largest title and input file name
+Need to use tempObject.get_VideoTrackObject() to return list, then grab resutling largest title and input file name
 into meta_core search for media meta data info.
 '''
-#tempObject.return_VideoTrackObject()
+#tempObject.get_VideoTrackObject()
 #titlesList.get("Title:"+str(title_index))
 
 
@@ -65,7 +65,7 @@ print("Summarized title list [Un-ordered]",size_dict)
 ordered_list = core.order_largest_tracks(size_dict)
 print("Ordered indexes [Based on file size]: "+str(ordered_list))
 
-tracks_list = tempObject.return_VideoTrackObject()
+tracks_list = tempObject.get_VideoTrackObject()
 main_title = tracks_list.get("Title:"+str(ordered_list[0]))
 print("Largest title is",str(main_title))
 
@@ -86,4 +86,8 @@ print("Largest title is",str(main_title))
 tempObject.update_Main_Title(str(ordered_list[0]))
 print(tempObject.movie_name)
 print(meta_search.imdb_search(tempObject.get_movie_Name()))
+
+print("+++++++++++++++++++++\n")
+print(tempObject.print_Main_Title_SoundTracksInfo_Summary())
+print(tempObject.print_Main_Title_SoundTracksInfo())
 #print(meta_search.imdb_search("ant man"))

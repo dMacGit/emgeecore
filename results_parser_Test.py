@@ -1,6 +1,11 @@
+from threading import Thread
+from subprocess import PIPE
+from queue import Queue
+import threading
 import meta_search
 import core
 import os
+import subprocess
 
 '''
     This Results_parser_Test.py class is used to debug/test the core.py code
@@ -79,15 +84,66 @@ print("Largest title is",str(main_title))
     - file name
     - Language
     
-    *Need to grab details from title track
-    *Also need to grab sTracks number and index start range
+    *Need to grab details from title track [done]
+    *Also need to grab sTracks number and index start range [done]
     
 '''
 tempObject.update_Main_Title(str(ordered_list[0]))
 print(tempObject.movie_name)
 print(meta_search.imdb_search(tempObject.get_movie_Name()))
 
-print("+++++++++++++++++++++\n")
+'''print("+++++++++++++++++++++\n")
 print(tempObject.print_Main_Title_SoundTracksInfo_Summary())
-print(tempObject.print_Main_Title_SoundTracksInfo())
+print(tempObject.print_Main_Title_SoundTracksInfo())'''
 #print(meta_search.imdb_search("ant man"))
+
+selected_title_index = ordered_list[0]
+'''if selected_title_index < 10 :
+    selected_title_index = str(selected_title_index).zfill(1)
+print("Selected track:",selected_title_index)'''
+#makemkvcon --profile=/home/phantom/.MakeMKV/phantoms.mmcp.xml --messages="/media/phantom/My Files/Documents/Python Projects/Emgee_Core/logs/messages.log" --progress="/media/phantom/My Files/Documents/Python Projects/Emgee_Core/logs/progress.log" mkv disc:0 0 /media/media/Rips/
+rip_command = 'makemkvcon --profile=~/.MakeMKV\phantoms.mmcp.xml '+core.makeMkv_progress_command+' mkv disc:0 '+str(selected_title_index),'c:\Rip\\'
+make_rip_command = ['makemkvcon', core.makeMkv_profile_options, core.makeMkv_messages_option, core.makeMkv_progress_command, 'mkv', 'disc:0',selected_title_index,core.makeMkv_media_dest_dir]
+
+print(rip_command)
+print(make_rip_command)
+
+class main_return_subprocess_thread_Class(threading.Thread):
+   def __init__(self):
+       super(main_return_subprocess_thread_Class, self).__init__()
+       self.subprocess_return_thread = Thread(target=self.run)
+       self._stop = threading.Event()
+       self.subprocess_return_thread.name = "subprocess_return_thread"
+
+   def stop(self):
+       self._stop.set()
+
+   def stopped(self):
+       return self._stop.isSet()
+
+   def run(self):
+       process = subprocessReturnQueue.get()
+       print(process)
+       p = subprocess.Popen(process, stdout=PIPE)
+       #while p.returncode is None:
+       returned_data = (p.communicate()[0])
+
+       print("== Executed Command without error! ==")
+       formatted_data = returned_data.decode('ascii').replace("'", "")
+       print(formatted_data)
+       subprocessReturnQueue.task_done()
+
+       print("=>Return subprocess thread end!<=")
+
+
+
+subprocessReturnQueue = Queue()
+#find_devices_command = ["makemkvcon", "-r", "--cache=1", "info", "disc:9999",core.makeMkv_profile_options]
+
+main_return_subprocess_thread = main_return_subprocess_thread_Class()
+main_return_subprocess_thread.subprocess_return_thread.start()
+subprocessReturnQueue.put(make_rip_command)
+while main_return_subprocess_thread.stopped() is False:
+    pass
+    #wait
+subprocessReturnQueue.join()

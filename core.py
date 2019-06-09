@@ -37,23 +37,35 @@ platform_lunix = False
 # App configs
 
 # While still testing named "test.log. Change to "makemkvcon.log" later
-output_file_name = 'test.log'
+DEFAULT_OUTPUT_FILE_NAME = 'test.log'
+DEFUALT_PROGRESS_FILE = 'progress.log'
+DEFAULT_MESSAGES_FILE ='messages.log'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-output_log_dir = os.path.join(BASE_DIR, 'logs/') #'/logs'
-output_file_path = output_log_dir
+DEFAULT_OUTPUT_LOG_DIR = os.path.join(BASE_DIR, 'logs/') #'/logs'
+DEFAULT_OUTPUT_FILE_PATH = DEFAULT_OUTPUT_LOG_DIR
+DEFAULT_PROGRESS_FILE_DIR = DEFAULT_OUTPUT_FILE_PATH # Progress file
+DEFAULT_PROGRESS_FILE_RELATIVE_PATH = DEFAULT_PROGRESS_FILE_DIR+DEFUALT_PROGRESS_FILE
+DEFAULT_MESSAGES_FILE_RELATIVE_PATH = DEFAULT_OUTPUT_FILE_PATH+DEFAULT_MESSAGES_FILE
 
 #Setting custom profile for makemkv to use
 makeMkv_profile_dir = USER_HOME+"/.MakeMKV/"
 makeMkv_profile_file = "phantoms.mmcp.xml" #This is some profile to match your ripping requirements
 makeMkv_profile_options = "--profile=" + makeMkv_profile_dir + makeMkv_profile_file
 
+#Setting --progress & --messages command args for makemkv to use
+makeMkv_progress_command = '--progress="'+DEFAULT_PROGRESS_FILE_RELATIVE_PATH+'"'
+makeMkv_messages_option = '--messages="'+DEFAULT_MESSAGES_FILE_RELATIVE_PATH+'"'
+
+#Setting MakeMkv target media folder
 makeMkv_media_dest_dir = "/media/media/Rips"
 
 print("folder tests: ")
 print("BASE_DIR",BASE_DIR)
-print("output_log_dir",output_log_dir)
-print("output_file_path",output_file_path)
+print("output_log_dir", DEFAULT_OUTPUT_LOG_DIR)
+print("output_file_path", DEFAULT_OUTPUT_FILE_PATH)
+print("job progress_file_dir",DEFAULT_PROGRESS_FILE_DIR)
+print("job progress_file_path",DEFAULT_PROGRESS_FILE_RELATIVE_PATH)
 print("makeMkv_profile_dir",makeMkv_profile_dir)
 print("makeMkv_profile_file",makeMkv_profile_file)
 print("makeMkv_profile_options",makeMkv_profile_options)
@@ -577,7 +589,7 @@ class main_logging_thread_Class(threading.Thread):
                 Removing trailing ' by stopping a character (index) short.
                 '''
                 cleanData = data[2:len(data) - 1]
-            with open(output_file_path + output_file_name, 'a') as f:
+            with open(DEFAULT_OUTPUT_FILE_PATH + DEFAULT_OUTPUT_FILE_NAME, 'a') as f:
                 formatted_Array = cleanData.split('\\n')
                 for nextline in formatted_Array:
                     f.write(debug_mesg + nextline + "\n")
@@ -680,7 +692,7 @@ class main_drive_check_thread_Class(threading.Thread):
                 # No disk[2] > 0 error.
                 """
                 make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info',
-                                           'dev:' + formatted_device_string,makeMkv_profile_options]
+                                           'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
                 message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
                 print("Make run command on dev: test path: " + str(make_disco_info_command))
                 subprocessReturnQueue.put(make_disco_info_command)
@@ -701,7 +713,7 @@ class main_drive_check_thread_Class(threading.Thread):
 
 def clear_test_log () :
 
-    with open(output_file_path + output_file_name, 'w') as f :
+    with open(DEFAULT_OUTPUT_FILE_PATH + DEFAULT_OUTPUT_FILE_NAME, 'w') as f :
         f.truncate()
         f.close()
     logging.info("Test log file cleared!")

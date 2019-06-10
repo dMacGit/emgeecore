@@ -1,4 +1,5 @@
 .idea/
-logs/
+logs/jobs/
+logs/devices/
 private_data/
 __pycache__/

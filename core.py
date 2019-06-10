@@ -11,6 +11,7 @@ import subprocess
 import logging
 import time
 import os
+import meta_search
 
 message_Logging_Queue = Queue()
 subprocessQueue = Queue()
@@ -103,6 +104,9 @@ app_log_mesg = "|Media_Grabber| "
 make_log_mesg = "<<Makemkvcon>> "
 handbrake_log_mesg = "<<[Handbrake>]> "
 
+
+# Inserted disc
+newDisc = ''
 
 # Exit variables
 
@@ -262,7 +266,6 @@ class disc_metaData(object):
             while str(split_lines[index]).__contains__("CINFO:"):
                 index_value = int(str(split_lines[index]).split(':')[1].split(',')[0])
                 meta_value = str(split_lines[index]).split(',')[-1]
-                #print(">>>>>>>> index_value:",index_value,"meta_value:",meta_value)
                 if int(index_value) is int(self.CINFO_INDEX.Media_Type.value):
                     if meta_value.__contains__(str(self.MEDIA_TYPE.BR.value)):
                         print("Detected media type!!!!")
@@ -276,14 +279,6 @@ class disc_metaData(object):
                     self.lang = meta_value.replace('"','')
                     print("Disc main lang:",self.lang)
 
-
-                '''if str(split_lines[index]).__contains__(str(self.MEDIA_TYPE.BR.value)):
-                    print("Detected media type!!!!")
-                    self.media_type = str(self.MEDIA_TYPE.BR.name)
-                    self.MediaType_Found = True'''
-
-                #if str(split_lines[index]).__contains__(str(self.MEDIA_TYPE.BR.value)):
-
                 self.disc_info_raw.append(str(split_lines[index]))
                 index += 1
 
@@ -293,25 +288,12 @@ class disc_metaData(object):
                 print("Pre_check:"+str(split_lines[index]))
 
             while str(split_lines[index]).__contains__("TINFO:"):
-                #for cIndex in range(index,max_lines):
-
-                #for cinfo_start_index in range(index,MAX_LINES):
-
                 current_title_number = int(str(split_lines[index]).split(":")[1].split(",")[0])
                 print(str(split_lines[index]))
-                # print("Video title track: "+str(current_title_number))
-                #while str(split_lines[index]).__contains__("TINFO:" + str(current_title_number)) is True:
                 temp_vList[str(title_track_line_num)] = str(split_lines[index])
                 title_track_line_num += 1
                 index += 1
-                '''if current_title_number < int(self.title_tracks_number):
-                    temp_vList[str(title_track_line_num)] = str(split_lines[index])
-                title_track_line_num += 1'''
 
-                '''if str(split_lines[index+1]).__contains__("TINFO:") is not True:
-                    self.video_tracks["Title:"+str(current_title_number)] = temp_vList.copy()
-                
-                    '''
                 if str(split_lines[index]).__contains__("TINFO:") is not True:
                     self.video_tracks["Title:" + str(current_title_number)] = temp_vList.copy()
                     temp_vList.clear()
@@ -427,7 +409,7 @@ class device_Object(object):
 
 
 def grab_largest_titles_Size(titles_list):
-    #Using a selection sort algorithm.
+    #Using a sort algorithm.
     #No need for super efficient algorithm. Only will contain max of 100 titles (Rarely)
     titlesList = dict(titles_list).copy()
     '''
@@ -469,8 +451,6 @@ def grab_largest_titles_Size(titles_list):
     titles_list.get("title#").get("Track#).iterator
     
     '''
-
-
     return_summary_dict = {}
 
     #Find file size parameter
@@ -480,7 +460,6 @@ def grab_largest_titles_Size(titles_list):
         temp_Title_object = titlesList.get("Title:"+str(title_index))
         # Next need to loop through the titles dict/array and find example: 'TINFO:0,10,0,"4.1 GB"'
         # Note: this looks to be the 2-3 index, under line marked 'TINFO:x,10,x ; "value"'
-        #print(str(temp_Title_object))
         for internal_title_index in range(len(temp_Title_object)):
             track_size = str(dict(temp_Title_object).get(str(internal_title_index))).split(",")[3]
             if track_size.__contains__("GB") or track_size.__contains__("MB"):
@@ -501,16 +480,6 @@ def grab_largest_titles_Size(titles_list):
                 print("Title: "+str(title_index)+" Line "+str(internal_title_index),dict(temp_Title_object).get(str(internal_title_index))," Found size: "+str(track_size_float))
                 track_size_float = 0
             
-
-        #return_summary_dict[title_index] = titlesList
-
-        temp_Title_object = ""
-
-    '''for title_index in range(len(titlesList)):
-        return_summary_dict[title_index] = titlesList
-        print("TODO")'''
-
-
     return return_summary_dict
 
 def order_largest_tracks(data_dictionary):
@@ -624,8 +593,63 @@ def start() :
     returned_data = diskCheckResultsQueue.get()
     #print("Returned data: "+returned_data)
     newDisc = disc_metaData(returned_data)
+    start_title_rip(newDisc)
     #newDisc.meta_parse(newDisc.raw)
     diskCheckResultsQueue.task_done()
+
+
+
+def start_title_rip(newDisc):
+
+
+    print("===Media Type confirmed: ", newDisc.get_Media_Type(), "===")
+    # print(tempObject.print_DiskInfo())
+    # print(tempObject.print_VideoTrackInfo())
+    print(newDisc.print_SoundTrackInfo())
+
+    size_dict = grab_largest_titles_Size(newDisc.get_VideoTrackObject())
+
+    print("Summarized title list [Un-ordered]", size_dict)
+    ordered_list = order_largest_tracks(size_dict)
+    print("Ordered indexes [Based on file size]: " + str(ordered_list))
+
+    tracks_list = newDisc.get_VideoTrackObject()
+    main_title = tracks_list.get("Title:" + str(ordered_list[0]))
+    print("Largest title is", str(main_title))
+
+    ''' 
+        Usefull info:
+
+        - Movie title/name
+        - durration hh:mm:ss
+        - # of Chapters
+        - Size
+        - file name
+        - Language
+
+        *Need to grab details from title track [done]
+        *Also need to grab sTracks number and index start range [done]
+
+    '''
+    newDisc.update_Main_Title(str(ordered_list[0]))
+    print(newDisc.movie_name)
+    #print(meta_search.imdb_search(newDisc.get_movie_Name()))
+
+    selected_title_index = ordered_list[0]
+    '''if selected_title_index < 10 :
+        selected_title_index = str(selected_title_index).zfill(1)
+    print("Selected track:",selected_title_index)'''
+    make_rip_command = ['makemkvcon', makeMkv_profile_options, makeMkv_messages_option, makeMkv_progress_command, 'mkv',
+                        'disc:' + str(0), str(selected_title_index),makeMkv_media_dest_dir]
+    disc = 0
+    print(make_rip_command)
+    subprocessReturnQueue.put(make_rip_command)
+    main_return_subprocess_thread = main_return_subprocess_thread_Class()
+    main_return_subprocess_thread.subprocess_return_thread.start()
+    results = subprocessResultsQueue.get()
+    subprocessResultsQueue.task_done()
+    print(results)
+
 '''
     Drive checking thread.
     - Currently this is checking queue of devices.
@@ -655,19 +679,7 @@ class main_drive_check_thread_Class(threading.Thread):
             message_Logging_Queue.put([app_log_mesg, devices_to_check])
             disk_Check_Queue.task_done()
 
-            #<<<--------Trigger shutdown went here! [Bellow commented out]
             print("___Return drive check thread stop triggered!")
-
-            """Example of subprocess call
-            find_devices_command = ["makemkvcon", "-r", "--cache=1", "info", "disc:9999",makeMkv_profile_options]
-            subprocessReturnQueue.put(find_devices_command)
-            main_return_subprocess_thread = main_return_subprocess_thread_Class()
-            main_return_subprocess_thread.subprocess_return_thread.start()
-            
-
-            result = subprocessResultsQueue.get()
-            subprocessResultsQueue.task_done()
-            """
 
             for item in devices_to_check:
                 print(item)
@@ -685,12 +697,6 @@ class main_drive_check_thread_Class(threading.Thread):
                 disk_check_first = subprocessResultsQueue.get()
                 subprocessResultsQueue.task_done()
                 message_Logging_Queue.put([app_log_mesg,"Scanning disk: "+disk_check_first])
-                """disk_check_echo = run_subprocess_command(['echo','$?'])
-                returnCode = disk_check_first[1]
-                #print(check_for_disk_command, "returned:", disk_check_first[1])
-                # If disc detected get info
-                # No disk[2] > 0 error.
-                """
                 make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info',
                                            'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
                 message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
@@ -700,16 +706,12 @@ class main_drive_check_thread_Class(threading.Thread):
                 main_return_subprocess_thread.subprocess_return_thread.start()
                 result = subprocessResultsQueue.get()
                 subprocessResultsQueue.task_done()
-                #print(result)
                 message_Logging_Queue.put([make_log_mesg, result])
                 diskCheckResultsQueue.put(result)
-
-                
                 #disk_Check_Queue.task_done()
                 self.stop()
                 trigger_Shutdown()
         print("=>Return drive check thread End!<=")
-        #[Above was commented out to here]
 
 def clear_test_log () :
 
@@ -743,8 +745,6 @@ class main_return_subprocess_thread_Class(threading.Thread):
        subprocessReturnQueue.task_done()
 
        print("=>Return subprocess thread end!<=")
-
-#def run_subprocess_command(command_arg):
 
 
 def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDvd = True) :
@@ -790,8 +790,7 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
 
         result = subprocessResultsQueue.get()
         subprocessResultsQueue.task_done()
-
-    # Writing out to file after parsing and sanitizing, also return formatted array
+        # Writing out to file after parsing and sanitizing, also return formatted array
         message_Logging_Queue.put((make_log_mesg, result))
         data = str(result).replace("'","")
         formatted_lines = data.split("\n")

@@ -102,8 +102,10 @@ selected_title_index = ordered_list[0]
     selected_title_index = str(selected_title_index).zfill(1)
 print("Selected track:",selected_title_index)'''
 #makemkvcon --profile=/home/phantom/.MakeMKV/phantoms.mmcp.xml --messages="/media/phantom/My Files/Documents/Python Projects/Emgee_Core/logs/messages.log" --progress="/media/phantom/My Files/Documents/Python Projects/Emgee_Core/logs/progress.log" mkv disc:0 0 /media/media/Rips/
-rip_command = 'makemkvcon --profile=~/.MakeMKV\phantoms.mmcp.xml '+core.makeMkv_progress_command+' mkv disc:0 '+str(selected_title_index),'c:\Rip\\'
-make_rip_command = ['makemkvcon', core.makeMkv_profile_options, core.makeMkv_messages_option, core.makeMkv_progress_command, 'mkv', 'disc:0',selected_title_index,core.makeMkv_media_dest_dir]
+rip_command = 'makemkvcon --profile=~/.MakeMKV/phantoms.mmcp.xml '+core.makeMkv_progress_command+' mkv disc:0 '+str(selected_title_index),'c:\Rip\\'
+
+disc = 0
+make_rip_command = ['makemkvcon', core.makeMkv_profile_options, core.makeMkv_messages_option, core.makeMkv_progress_command, 'mkv', 'disc:'+str(disc),str(selected_title_index),core.makeMkv_media_dest_dir]
 
 print(rip_command)
 print(make_rip_command)
@@ -134,6 +136,7 @@ class main_return_subprocess_thread_Class(threading.Thread):
        subprocessReturnQueue.task_done()
 
        print("=>Return subprocess thread end!<=")
+       main_return_subprocess_thread.stop()
 
 
 

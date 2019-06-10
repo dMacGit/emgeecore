@@ -1,4 +1,4 @@
-from core import start_app_Threads, initialize, shutdown
+from core import *
 
 '''
     This Main.py class is the entry point to run the core.py

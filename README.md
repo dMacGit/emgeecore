@@ -1,6 +1,6 @@
-## Core logic for emgee (Media Grabber) application
+## Emgeecore - Backend logic for emgee (Media Grabber) application
 
-#### *Release comming soon.*
+## Current Release | [![Version](https://img.shields.io/badge/Release-v1.1-brightgreen.svg)](https://github.com/dMacGit/emgeecore/releases/tag/v1.1) [![Version](https://img.shields.io/badge/Tag-v1.1-brightgreen.svg)](https://github.com/dMacGit/emgeecore/releases/tag/v1.1)
 
 This is the backend logic running my main project, the [Media Grabber Application](https://github.com/dMacGit/Media_Grabber).
 

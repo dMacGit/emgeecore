@@ -1,6 +1,6 @@
 ## Emgeecore - Backend logic for emgee (Media Grabber) application
 
-## Current Release | [![Version](https://img.shields.io/badge/Release-v1.1-brightgreen.svg)](https://github.com/dMacGit/emgeecore/releases/tag/v1.1) [![Version](https://img.shields.io/badge/Tag-v1.1-blue.svg)](https://github.com/dMacGit/emgeecore/releases/tag/v1.1)
+[![Release](https://img.shields.io/github/release/dmacgit/emgeecore.svg)](https://github.com/dMacGit/emgeecore/releases/latest) [![Commit](https://img.shields.io/github/tag/dmacgit/emgeecore.svg)](https://github.com/dMacGit/emgeecore/tag/latest)
 
 This is the backend logic running my main project, the [Media Grabber Application](https://github.com/dMacGit/Media_Grabber).
 

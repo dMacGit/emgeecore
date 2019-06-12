@@ -26,7 +26,7 @@ diskCheckResultsQueue = Queue()
 
 returned_Data_Queue = Queue()
 
-logging.basicConfig(level=logging.INFO,format='(%(threadName)-10s) %(message)s',)
+logging.basicConfig(level=logging.DEBUG,format='(%(threadName)-10s) %(message)s',)
 
 USER_HOME = str(Path.home())
 
@@ -61,17 +61,6 @@ makeMkv_messages_option = '--messages="'+DEFAULT_MESSAGES_FILE_RELATIVE_PATH+'"'
 #Setting MakeMkv target media folder
 makeMkv_media_dest_dir = "/media/media/Rips"
 
-print("folder tests: ")
-print("BASE_DIR",BASE_DIR)
-print("output_log_dir", DEFAULT_OUTPUT_LOG_DIR)
-print("output_file_path", DEFAULT_OUTPUT_FILE_PATH)
-print("job progress_file_dir",DEFAULT_PROGRESS_FILE_DIR)
-print("job progress_file_path",DEFAULT_PROGRESS_FILE_RELATIVE_PATH)
-print("makeMkv_profile_dir",makeMkv_profile_dir)
-print("makeMkv_profile_file",makeMkv_profile_file)
-print("makeMkv_profile_options",makeMkv_profile_options)
-print("makeMkv_media_dest_dir",makeMkv_media_dest_dir)
-
 
 #Command to rip first title on dev:/dev/sr01 using profile
 #makemkvcon --profile=makeMkv_profile_dir + makeMkv_profile_file+"mkv dev:/dev/sr0 0 /media/media/Rips"
@@ -98,6 +87,9 @@ cd_Device_Object = None
 BR_Device_List = {}
 DVD_Device_List = {}
 CD_Device_List = {}
+
+titles = []
+found_titles = {}
 
 # Formatting / Debug log values
 app_log_mesg = "|Media_Grabber| "
@@ -504,7 +496,7 @@ class main_logging_thread_Class(threading.Thread):
         self.loggingThread = Thread(target=self.run)
         self._stop = threading.Event()
         self.loggingThread.name = "loggingThread"
-        logging.info("Logging Class started!")
+        logging.info("Logging Class Initialized!")
 
     def stop(self):
         print(">>> Stop has been called on Logging thread! <<<")
@@ -515,10 +507,11 @@ class main_logging_thread_Class(threading.Thread):
         return self._stop.isSet()
 
     def run(self):
+        logging.info("[Running] Logging Class Running!")
         while self.stopped() is not True:
             #message = message_Logging_Queue.get()
             #logging.info("Checing queue..")
-            print("[1] wainting on logging Queue.get()")
+            logging.debug("[Blocking] Logging thread waiting on: logging Queue.get() call!")
             try:
                 log = message_Logging_Queue.get()
             #print("[2] logging Queue.get() has returned")
@@ -530,18 +523,19 @@ class main_logging_thread_Class(threading.Thread):
                 self.write_to_log(log[0],log[1])
             #print("[4] Finished writing to log file")
             message_Logging_Queue.task_done()
+            logging.debug("[Released] Logging thread Queue.get() call released!")
             #print("[5] Queue task is done!")
             if SHUTDOWN_TRIGGERED is True and main_drive_check_thread.is_alive() is not True:
                 self.stop()
-                print("___Logging thread stop triggered!")
+                logging.info("[Termination] Logging thread stop triggered!")
 
-            print("[6] Checked for termination")
+            logging.debug("[Pre-Check] Logging Thread checked for call to terminate")
             #logging.info("logging done!")
 
-        print("Printing EOF: " + get_current_timestamp_footer())
+        logging.debug("Printing EOF: " + get_current_timestamp_footer())
         self.write_to_log(get_current_timestamp_footer(),"")
         self.stop()
-        print("=>Logging thread End!<=")
+        logging.info("[END] Logging thread stopped!")
 
     def write_to_log(self, debug_mesg, data):
         '''
@@ -589,15 +583,44 @@ def start() :
         message_Logging_Queue.put((app_log_mesg, "Checking DVD devices for discs..."))
         disk_Check_Queue.put(DVD_Device_List)
 
+    #TODO Figure out simple thread to handle disc insert on any drive See below details (Line 588)
+    '''
+        TODO
+        Currently the programe handle tasks semi-synchronously.
+        Most threads are asynchronus, but the program terminates on finding no disks after running.
+        Need to setup another thread that starts at run, and waits on disk insert, then triggers other threads/function
+        to read specific or all devices for new media.
+        
+        Once disc found, then need to handle the titles as normal.
+        Program needs to "wait" for shutdown/terminal call, before stopping.
+        *May need to setup a batch script to do this via command line call to function etc.
+    '''
+    '''[START] Refactor/re-write code'''    #<----------------- START
     #Wait on receving data
-    returned_data = diskCheckResultsQueue.get()
+    if diskCheckResultsQueue.empty() is False :
+        logging.debug("[Blocking]{diskCheckResultsQueue} Start blocking on return call from diskCheckResultsQueue.get()")
+        returned_data = diskCheckResultsQueue.get()
+        logging.debug(
+            "[Released]{diskCheckResultsQueue} Start released from call to diskCheckResultsQueue.get()")
     #print("Returned data: "+returned_data)
-    newDisc = disc_metaData(returned_data)
-    start_title_rip(newDisc)
+        newDisc = disc_metaData(returned_data)
+        start_title_rip(newDisc)
+
+    else :
+        results = diskCheckResultsQueue.get()
+        logging.debug(
+            "[Released]{diskCheckResultsQueue} :: INFO ::")
+        print(results)
+        logging.debug(
+            "[Released]{diskCheckResultsQueue} :: ERROR :: Start released from diskCheckResultsQueue.get()!")
+        diskCheckResultsQueue.task_done()
+
     #newDisc.meta_parse(newDisc.raw)
-    diskCheckResultsQueue.task_done()
 
+    logging.debug(
+        "[END] Start function finished!")
 
+    '''[END] Refactor/re-write code'''  #<------------------- END
 
 def start_title_rip(newDisc):
 
@@ -662,8 +685,7 @@ class main_drive_check_thread_Class(threading.Thread):
         self.drive_Check_Thread = Thread(target=self.run)
         self._stop = threading.Event()
         self.drive_Check_Thread.name = "driveCheckThread"
-
-        logging.info("driveCheck Thread Class started!")
+        logging.info("driveCheck Thread Class Initialized!")
 
     def stop(self):
         self._stop.set()
@@ -672,14 +694,15 @@ class main_drive_check_thread_Class(threading.Thread):
         return self._stop.isSet()
 
     def run(self):
+        logging.info("[Running] driveCheck Thread Class started!")
         while not self.stopped():
+            logging.debug("[Blocking] driveCheck Thread Blocking on call to disk_Check_Queue.get()!")
             devices_to_check = disk_Check_Queue.get()
+            logging.debug("[Released] driveCheck Thread released on call to disk_Check_Queue.get()!")
             message_Logging_Queue.put([app_log_mesg, "Devices to check... {}".format(devices_to_check)])
             message_Logging_Queue.put([app_log_mesg,"checking devices {}".format(devices_to_check)])
             message_Logging_Queue.put([app_log_mesg, devices_to_check])
             disk_Check_Queue.task_done()
-
-            print("___Return drive check thread stop triggered!")
 
             for item in devices_to_check:
                 print(item)
@@ -694,24 +717,29 @@ class main_drive_check_thread_Class(threading.Thread):
                 subprocessReturnQueue.put(check_for_disk_command)
                 main_return_subprocess_thread = main_return_subprocess_thread_Class()
                 main_return_subprocess_thread.subprocess_return_thread.start()
+                logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
                 disk_check_first = subprocessResultsQueue.get()
                 subprocessResultsQueue.task_done()
+                logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
                 message_Logging_Queue.put([app_log_mesg,"Scanning disk: "+disk_check_first])
                 make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info',
                                            'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
                 message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
-                print("Make run command on dev: test path: " + str(make_disco_info_command))
+                logging.info("Make run command on dev: test path: " + str(make_disco_info_command))
                 subprocessReturnQueue.put(make_disco_info_command)
                 main_return_subprocess_thread = main_return_subprocess_thread_Class()
                 main_return_subprocess_thread.subprocess_return_thread.start()
+                logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
                 result = subprocessResultsQueue.get()
                 subprocessResultsQueue.task_done()
+                logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
                 message_Logging_Queue.put([make_log_mesg, result])
                 diskCheckResultsQueue.put(result)
                 #disk_Check_Queue.task_done()
                 self.stop()
                 trigger_Shutdown()
-        print("=>Return drive check thread End!<=")
+                logging.info("[Termination] Return drive check thread stop triggered!")
+        logging.info("[END] Return drive check thread stopped!")
 
 def clear_test_log () :
 
@@ -734,7 +762,9 @@ class main_return_subprocess_thread_Class(threading.Thread):
        return self._stop.isSet()
 
    def run(self):
+       logging.debug("[Blocking] Subprocess thread blocking on subprocessReturnQueue.get() call!")
        process = subprocessReturnQueue.get()
+       logging.debug("[Released] Subprocess thread released from subprocessReturnQueue.get() call!")
        p = subprocess.Popen(process, stdout=PIPE)
        #while p.returncode is None:
        returned_data = (p.communicate()[0])
@@ -743,11 +773,21 @@ class main_return_subprocess_thread_Class(threading.Thread):
        formatted_data = returned_data.decode('ascii').replace("'", "")
        subprocessResultsQueue.put(formatted_data)
        subprocessReturnQueue.task_done()
-
-       print("=>Return subprocess thread end!<=")
+       logging.info("[END] Return subprocess thread stopped!")
 
 
 def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDvd = True) :
+    print("folder tests: ")
+    print("BASE_DIR", BASE_DIR)
+    print("output_log_dir", DEFAULT_OUTPUT_LOG_DIR)
+    print("output_file_path", DEFAULT_OUTPUT_FILE_PATH)
+    print("job progress_file_dir", DEFAULT_PROGRESS_FILE_DIR)
+    print("job progress_file_path", DEFAULT_PROGRESS_FILE_RELATIVE_PATH)
+    print("makeMkv_profile_dir", makeMkv_profile_dir)
+    print("makeMkv_profile_file", makeMkv_profile_file)
+    print("makeMkv_profile_options", makeMkv_profile_options)
+    print("makeMkv_media_dest_dir", makeMkv_media_dest_dir)
+
     """Initialize function
 
         Main entry point into program.
@@ -862,11 +902,17 @@ def shutdown():
     """
     ### After stopping call join, on each thread, which waits to handle termination
     subprocessReturnQueue.join()
+    logging.info("[SHUTDOWN] subprocessReturnQueue joined!")
     subprocessResultsQueue.join()
+    logging.info("[SHUTDOWN] subprocessResultsQueue joined!")
     subprocessQueue.join()
+    logging.info("[SHUTDOWN] subprocessQueue joined!")
     disk_Check_Queue.join()
+    logging.info("[SHUTDOWN] disk_Check_Queue joined!")
     diskCheckResultsQueue.join()
+    logging.info("[SHUTDOWN] diskCheckResultsQueue joined!")
     returned_Data_Queue.join()
+    logging.info("[SHUTDOWN] returned_Data_Queue joined!")
 
     print("End of program!")
 

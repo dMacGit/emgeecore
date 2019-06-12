@@ -1,0 +1,69 @@
+|Media_Grabber| Lunix Platform OS detected...
+|Media_Grabber| Grabbing Device/Drive info:
+|Media_Grabber| ===============================
+|Media_Grabber| == Executed Command without error! ==
+<<Makemkvcon>> MSG:1005,0,1,"MakeMKV v1.14.3 linux(x64-release) started","%1 started","MakeMKV v1.14.3 linux(x64-release)"
+DRV:0,1,999,0,"BD-RE TSSTcorp BDDVDW SE-506CB TS02","","/dev/sr0"
+DRV:1,256,999,0,"","",""
+DRV:2,256,999,0,"","",""
+DRV:3,256,999,0,"","",""
+DRV:4,256,999,0,"","",""
+DRV:5,256,999,0,"","",""
+DRV:6,256,999,0,"","",""
+DRV:7,256,999,0,"","",""
+DRV:8,256,999,0,"","",""
+DRV:9,256,999,0,"","",""
+DRV:10,256,999,0,"","",""
+DRV:11,256,999,0,"","",""
+DRV:12,256,999,0,"","",""
+DRV:13,256,999,0,"","",""
+DRV:14,256,999,0,"","",""
+DRV:15,256,999,0,"","",""
+MSG:5010,0,0,"Failed to open disc","Failed to open disc"
+TCOUNT:0
+
+|Media_Grabber| Found Blu-Ray device!
+|Media_Grabber| DRV:0,"BD-RE TSSTcorp BDDVDW SE-506CB TS02","/dev/sr0"
+|Media_Grabber| ----------------
+
+|Media_Grabber| Starting App...
+
+|Media_Grabber| Found and Added BR device: "BD-RE TSSTcorp BDDVDW SE-506CB TS02" @ path: "/dev/sr0"
+|Media_Grabber| Checking BR devices for discs...
+|Media_Grabber| Devices to check... {'"BD-RE TSSTcorp BDDVDW SE-506CB TS02"': <core.device_Object object at 0x7fc270b89588>}
+|Media_Grabber| checking devices {'"BD-RE TSSTcorp BDDVDW SE-506CB TS02"': <core.device_Object object at 0x7fc270b89588>}
+|Media_Grabber| Checking device... DRV:0
+1
+999
+0
+"BD-RE TSSTcorp BDDVDW SE-506CB TS02"
+""
+"/dev/sr0"
+
+|Media_Grabber| Running command ... ['blkid', '/dev/sr0']
+|Media_Grabber| == Executed Command without error! ==
+|Media_Grabber| Scanning disk: 
+|Media_Grabber| Make run command on dev: test path: ['makemkvcon', '-r', '--cache=1', 'info', 'dev:/dev/sr0', '--profile=/home/phantom/.MakeMKV/phantoms.mmcp.xml', '--progress="/media/phantom/My Files/Documents/Python Projects/Emgee_Core/logs/progress.log"']
+|Media_Grabber| == Executed Command without error! ==
+<<Makemkvcon>> MSG:1005,0,1,"MakeMKV v1.14.3 linux(x64-release) started","%1 started","MakeMKV v1.14.3 linux(x64-release)"
+DRV:0,1,999,0,"BD-RE TSSTcorp BDDVDW SE-506CB TS02","","/dev/sr0"
+DRV:1,256,999,0,"","",""
+DRV:2,256,999,0,"","",""
+DRV:3,256,999,0,"","",""
+DRV:4,256,999,0,"","",""
+DRV:5,256,999,0,"","",""
+DRV:6,256,999,0,"","",""
+DRV:7,256,999,0,"","",""
+DRV:8,256,999,0,"","",""
+DRV:9,256,999,0,"","",""
+DRV:10,256,999,0,"","",""
+DRV:11,256,999,0,"","",""
+DRV:12,256,999,0,"","",""
+DRV:13,256,999,0,"","",""
+DRV:14,256,999,0,"","",""
+DRV:15,256,999,0,"","",""
+MSG:5010,0,0,"Failed to open disc","Failed to open disc"
+TCOUNT:0
+
+Te
+=== Media Grabber (Emgee) application exit @ 2019-06-12 21:21:56.444535 ===

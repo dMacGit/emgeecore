@@ -928,9 +928,9 @@ main_drive_check_thread = main_drive_check_thread_Class()
 
 """
 Need to call functions in this order:
-- start_app_Threads() <- When starting server
+- start_app_Threads() <- When starting server [Remove this!]
 - initialize() <- starts server logic
-
+- [ start_server() ] <- Need to add this
 When shutting down:
 - shutdown()
 """

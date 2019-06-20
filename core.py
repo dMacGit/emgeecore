@@ -41,9 +41,12 @@ platform_lunix = False
 DEFAULT_OUTPUT_FILE_NAME = 'debug.log'
 DEFUALT_PROGRESS_FILE = 'progress.log'
 DEFAULT_MESSAGES_FILE ='messages.log'
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 DEFAULT_OUTPUT_LOG_DIR = os.path.join(BASE_DIR, 'logs/') #'/logs'
+DEFAULT_DEVICES_LOG_DIR = DEFAULT_OUTPUT_LOG_DIR+'devices/'
+DEFAULT_JOBS_LOG_DIR = DEFAULT_OUTPUT_LOG_DIR+'jobs/'
 DEFAULT_OUTPUT_FILE_PATH = DEFAULT_OUTPUT_LOG_DIR
 DEFAULT_PROGRESS_FILE_DIR = DEFAULT_OUTPUT_FILE_PATH # Progress file
 DEFAULT_PROGRESS_FILE_RELATIVE_PATH = DEFAULT_PROGRESS_FILE_DIR+DEFUALT_PROGRESS_FILE
@@ -776,12 +779,30 @@ class main_drive_check_thread_Class(threading.Thread):
 
         logging.info("[END] Return drive check thread stopped!")
 
-def clear_app_log () :
-
+def clear_app_logs (driveLogs=CLEAR_DRIVE_LOGS_ONSTART) :
     with open(DEFAULT_OUTPUT_FILE_PATH + DEFAULT_OUTPUT_FILE_NAME, 'w') as f :
         f.truncate()
         f.close()
-    logging.info("Test log file cleared!")
+        logging.info("Debug log file cleared!")
+    with open(DEFAULT_OUTPUT_FILE_PATH + DEFAULT_MESSAGES_FILE, 'w') as f :
+        f.truncate()
+        f.close()
+        logging.info("Messaging log file cleared!")
+    with open(DEFAULT_OUTPUT_FILE_PATH + DEFUALT_PROGRESS_FILE, 'w') as f :
+        f.truncate()
+        f.close()
+        logging.info("Progress log file cleared!")
+
+    if driveLogs :
+        for file in os.listdir(DEFAULT_DEVICES_LOG_DIR):
+            print("found "+str(file))
+            #try :
+            #    os.remove()
+            #except Exception as e:
+            #    print("Error deleting device log files!",e)
+
+
+
 
 def check_app_files():
     #TODO Need to check for required log files to run application. Create if not found!
@@ -883,7 +904,7 @@ def create_file(filename,data=""):
     #TODO
     pass
 
-def create_uuid_log():
+def write_uuid_log(drive):
     #TODO write up uuid log creation
     # Must follow structure:
     # > path:dev/sr#
@@ -891,7 +912,24 @@ def create_uuid_log():
     # > -- new logs start here
     # New log lines in format:
     # timestamp:disc_title:(info_scanned)true/false,(ripped)true/false:
-    pass
+
+    # Checkg DriveObject is correct type
+    if type(drive) is device_Object :
+        if os.path.isfile(DEFAULT_DEVICES_LOG_DIR+drive.uuid+'.log') is False :
+            print(drive.uuid + ".log doesn't exist! Creating new file...")
+            #Create new file
+            with open(DEFAULT_DEVICES_LOG_DIR+drive.uuid+'.log', 'w') as file :
+                file.write('path:'+drive.path+'\nname:'+drive.name+'\n'+get_current_timestamp_footer()+':'+drive.scanned+':'+drive.ripped)
+                file.close()
+            print("...completed")
+        else :
+            print(drive.uuid+'.log exists!')
+            print("updating...")
+            with open(DEFAULT_DEVICES_LOG_DIR+drive.uuid+'.log', 'w') as file :
+                file.write(get_current_timestamp_footer()+':'+drive.scanned+':'+drive.ripped)
+                file.close()
+            print("...completed")
+
 
 class main_return_subprocess_thread_Class(threading.Thread):
    def __init__(self):
@@ -983,7 +1021,7 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
         platform_lunix = False
 
     if platform_lunix :
-        clear_app_log()
+        clear_app_logs()
         message_Logging_Queue.put([app_log_mesg,"Lunix Platform OS detected..."])
         time.sleep(1)
         #newLog = LogMessage(app_log_mesg, "Grabbing Device/Drive info:")

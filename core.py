@@ -406,17 +406,42 @@ class device_Object(object):
         self.devicePath = self.data[6]
         self.uuid = ""
         self.cached = False
+        self.raw = ""
 
-    def set_UUID(self, id):
+    def getName(self):
+        return self.deviceName
+
+    def setRaw(self, dataString):
+        self.raw = dataString
+
+    def getPath(self):
+        return self.devicePath
+
+    def getTitle(self):
+        if self.deviceTitle.__contains__("") is False :
+            logging.info("({} - {}) Has title: {}".format(self.devicePath, self.deviceName, self.deviceTitle))
+            return self.deviceTitle
+        logging.info("({} - {}) Has no title".format(self.devicePath, self.deviceName))
+        return False
+
+
+    def setTitle(self, title):
+        self.deviceTitle = title
+
+    def setUUID(self, id):
         self.uuid = id
 
-    def get_UUID(self):
-        return self.uuid
+    def getUUID(self):
+        if self.uuid.__contains__("") is False :
+            logging.info("({} - {}) Has UUID: {}".format(self.devicePath, self.deviceName, self.uuid))
+            return self.uuid
+        logging.info("({} - {}) Has no UUID".format(self.devicePath, self.deviceName))
+        return False
 
-    def set_isCached(self,isCached):
+    def setIsCached(self,isCached):
         self.cached = isCached
 
-    def get_isCached(self):
+    def isCached(self):
         return self.cached
 
     def __str__(self):
@@ -730,9 +755,12 @@ class main_drive_check_thread_Class(threading.Thread):
             message_Logging_Queue.put([app_log_mesg, dvd_devices_to_check])
         disk_Check_Queue.task_done()
         result = ''
+        itemCount = 0
         while not self.stopped():
             for item in devices_to_check:
-                print(item)
+                print("item {} : {}".format(itemCount,item))
+                itemCount += 1
+
             for device in devices_to_check:
                 # Running through devices to find discs
                 device_value = devices_to_check[device]
@@ -751,21 +779,38 @@ class main_drive_check_thread_Class(threading.Thread):
                     print("Disk check returned nothing: ",disk_check_first)
                 else :
                     subprocessResultsQueue.task_done()
-                    logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
-                    message_Logging_Queue.put([app_log_mesg,"Scanning disk: "+disk_check_first])
-                    make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info',
-                                               'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
-                    message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
-                    logging.info("Make run command on dev: test path: " + str(make_disco_info_command))
-                    subprocessReturnQueue.put(make_disco_info_command)
-                    main_return_subprocess_thread = main_return_subprocess_thread_Class()
-                    main_return_subprocess_thread.subprocess_return_thread.start()
-                    logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
-                    result = subprocessResultsQueue.get()
-                    subprocessResultsQueue.task_done()
-                    logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
-                    message_Logging_Queue.put([make_log_mesg, result])
-                    print("Results printout after logging... >>> \n",result)
+                    #Format of return string: /dev/sr0: UUID="3b2fabba00000000" LABEL="PUBLIC_ENEMIES" TYPE="udf"
+                    # path: UUID="" LABEL="" TYPE=""
+                    if device_value.getUUID() is False :
+                        split_string = disk_check_first.split(" ")
+                        parsed_uuid = split_string[1].split('"')[1]
+                        parsed_title = split_string[2].split('"')[1]
+                        device_value.setUUID(parsed_uuid)
+                        device_value.setTitle(parsed_title)
+
+                    if device_value.isCached() is False :
+                        logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
+                        message_Logging_Queue.put([app_log_mesg,"Scanning disk: "+disk_check_first])
+                        make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info',
+                                                   'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
+                        message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
+                        logging.info("Make run command on dev: test path: " + str(make_disco_info_command))
+                        subprocessReturnQueue.put(make_disco_info_command)
+                        main_return_subprocess_thread = main_return_subprocess_thread_Class()
+                        main_return_subprocess_thread.subprocess_return_thread.start()
+                        logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
+                        result = subprocessResultsQueue.get()
+                        subprocessResultsQueue.task_done()
+                        logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
+                        message_Logging_Queue.put([make_log_mesg, result])
+                        device_value.setRaw(result)
+                        device_value.setIsCached(True)
+                        devices_to_check[device] = device_value
+                        logging.info("[Done] Device {} : {} Is now Cached!".format(device_value.getPath(),
+                                                                                       device_value.getName()))
+                    else :
+                        logging.info("[Done] Device {} : {} Is Already Cached!".format(device_value.getPath(),device_value.getName()))
+                    #print("Results printout after logging... >>> \n",result)
                     '''if diskCheckResultsQueue.empty() is False :
                         dumpObject = diskCheckResultsQueue.get()
                         logging.info("[Override] Disk check results queue...")
@@ -1060,7 +1105,7 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
             found_bray = True
             br_Device_Object = device_Object(working_Object)
             bray_dev = working_Object
-            BR_Device_List[br_Device_Object.deviceName] = br_Device_Object
+            BR_Device_List[br_Device_Object.devicePath] = br_Device_Object
             '''message_Logging_Queue.put(
                 (app_log_mesg, "Found and Added BR device: " + BR_Device_List[br_Device_Object].deviceName + " @ path: " +
                  BR_Device_List[br_Device_Object].devicePath))
@@ -1069,7 +1114,7 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
         elif working_Object.__contains__("DVD") :
             found_dvd = True
             dvd_Device_Object = device_Object(working_Object)
-            DVD_Device_List[dvd_Device_Object.deviceName] = dvd_Device_Object
+            DVD_Device_List[dvd_Device_Object.devicePath] = dvd_Device_Object
             dvd_dev = working_Object
             '''message_Logging_Queue.put(
                 (app_log_mesg, "Found and Added DVD device: " + DVD_Device_List[dvd_Device_Object].deviceName + " @ path: " +

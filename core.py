@@ -38,7 +38,7 @@ platform_lunix = False
 # App configs
 
 # While still testing named "test.log. Change to "makemkvcon.log" later
-DEFAULT_OUTPUT_FILE_NAME = 'test.log'
+DEFAULT_OUTPUT_FILE_NAME = 'debug.log'
 DEFUALT_PROGRESS_FILE = 'progress.log'
 DEFAULT_MESSAGES_FILE ='messages.log'
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -90,11 +90,15 @@ CD_Device_List = {}
 
 titles = []
 found_titles = {}
+titles_cached = {} # { drive_path: True/False if scanned, }
 
 # Formatting / Debug log values
 app_log_mesg = "|Media_Grabber| "
 make_log_mesg = "<<Makemkvcon>> "
 handbrake_log_mesg = "<<[Handbrake>]> "
+
+CLEAR_LOGS_ONSTART = True
+CLEAR_DRIVE_LOGS_ONSTART = True
 
 
 # Inserted disc
@@ -111,14 +115,14 @@ def get_current_timestamp_footer():
     return LOG_FILE_EXIT_FOOTER
 
 
-def return_str_tracks(dictionary):
-    titles = dict(dictionary).keys()
-    all_titles_str = ""
-    for title in titles:
-        all_titles_str += title
-        title_value = dict(dictionary).get(title)
-        all_titles_str += "\n "+title_value
-    return all_titles_str
+# def return_str_tracks(dictionary):
+#     titles = dict(dictionary).keys()
+#     all_titles_str = ""
+#     for title in titles:
+#         all_titles_str += title
+#         title_value = dict(dictionary).get(title)
+#         all_titles_str += "\n "+title_value
+#     return all_titles_str
 
 
 class disc_metaData(object):
@@ -397,6 +401,20 @@ class device_Object(object):
         self.deviceName = self.data[4]
         self.deviceTitle = self.data[5]
         self.devicePath = self.data[6]
+        self.uuid = ""
+        self.cached = False
+
+    def set_UUID(self, id):
+        self.uuid = id
+
+    def get_UUID(self):
+        return self.uuid
+
+    def set_isCached(self,isCached):
+        self.cached = isCached
+
+    def get_isCached(self):
+        return self.cached
 
     def __str__(self):
         returned = ""
@@ -495,12 +513,12 @@ def order_largest_tracks(data_dictionary):
 
     return sorted(return_ordered_dictionary, key=return_ordered_dictionary.get, reverse=True)
 
-def print_Tracks_Array(ordered_titles):
-    titles_array = list(ordered_titles).copy()
-    returned_title_string = "\n\nTINFO objects: \n\n"+str(titles_array)
-    for index in range(0,len(titles_array)):
-        returned_title_string += "\n" + str(titles_array[index])
-    return returned_title_string
+# def print_Tracks_Array(ordered_titles):
+#     titles_array = list(ordered_titles).copy()
+#     returned_title_string = "\n\nTINFO objects: \n\n"+str(titles_array)
+#     for index in range(0,len(titles_array)):
+#         returned_title_string += "\n" + str(titles_array[index])
+#     return returned_title_string
 
 class main_logging_thread_Class(threading.Thread):
     def __init__(self):
@@ -692,13 +710,21 @@ class main_drive_check_thread_Class(threading.Thread):
         return self._stop.isSet()
 
     def run(self):
+
         logging.info("[Running] driveCheck Thread Class started!")
-        logging.debug("[Blocking] driveCheck Thread Blocking on call to disk_Check_Queue.get()!")
+        logging.debug("[Blocking] driveCheck Thread Blocking on call to disk_Check_Queue.get() {BRs}!")
         devices_to_check = disk_Check_Queue.get()
-        logging.debug("[Released] driveCheck Thread released on call to disk_Check_Queue.get()!")
+        logging.debug("[Released] driveCheck Thread released on call to disk_Check_Queue.get()! {BRs}")
         message_Logging_Queue.put([app_log_mesg, "Devices to check... {}".format(devices_to_check)])
         message_Logging_Queue.put([app_log_mesg, "checking devices {}".format(devices_to_check)])
         message_Logging_Queue.put([app_log_mesg, devices_to_check])
+        if disk_Check_Queue.empty() is False :
+            logging.debug("[Blocking] driveCheck Thread Blocking on call to disk_Check_Queue.get()! {DVDs}")
+            dvd_devices_to_check = disk_Check_Queue.get()
+            logging.debug("[Released] driveCheck Thread released on call to disk_Check_Queue.get()! {DVDs}")
+            message_Logging_Queue.put([app_log_mesg, "Devices to check... {}".format(dvd_devices_to_check)])
+            message_Logging_Queue.put([app_log_mesg, "checking devices {}".format(dvd_devices_to_check)])
+            message_Logging_Queue.put([app_log_mesg, dvd_devices_to_check])
         disk_Check_Queue.task_done()
         result = ''
         while not self.stopped():
@@ -750,12 +776,122 @@ class main_drive_check_thread_Class(threading.Thread):
 
         logging.info("[END] Return drive check thread stopped!")
 
-def clear_test_log () :
+def clear_app_log () :
 
     with open(DEFAULT_OUTPUT_FILE_PATH + DEFAULT_OUTPUT_FILE_NAME, 'w') as f :
         f.truncate()
         f.close()
     logging.info("Test log file cleared!")
+
+def check_app_files():
+    #TODO Need to check for required log files to run application. Create if not found!
+    '''
+
+
+        /logs:
+        messages.log
+        progress.log
+        debug.log
+
+        /logs/devices/
+        *UUID logs go in here once new device found* suffix .log
+        /logs/jobs/
+        *Ripp/encode job logs go in here*
+
+        print("makeMkv_profile_dir", makeMkv_profile_dir)
+        print("makeMkv_profile_file", makeMkv_profile_file)
+        print("makeMkv_profile_options", makeMkv_profile_options)
+        print("makeMkv_media_dest_dir", makeMkv_media_dest_dir)
+    '''
+    #First check base dirs
+    #try :
+    if os.path.isdir(DEFAULT_OUTPUT_LOG_DIR) is False :
+        print("/logs NOT Found!")
+        '''
+        Create all of the things:
+        /logs/debug.log
+        /logs/messages.log
+        /logs/progress.log
+        /logs/devices/
+        /logs/jobs/
+        '''
+        print("Creating /logs base directory...")
+        os.makedirs(DEFAULT_OUTPUT_LOG_DIR)
+        print("Creating /logs/"+DEFAULT_OUTPUT_FILE_NAME+" file...")
+        mainlog = open(DEFAULT_OUTPUT_LOG_DIR+DEFAULT_OUTPUT_FILE_NAME, "w")
+        mainlog.write("")
+        mainlog.close()
+        print("Creating /logs/" + DEFAULT_MESSAGES_FILE + " file...")
+        messagelog = open(DEFAULT_OUTPUT_LOG_DIR+DEFAULT_MESSAGES_FILE, "w")
+        messagelog.write("")
+        messagelog.close()
+        print("Creating /logs/" + DEFUALT_PROGRESS_FILE + " file...")
+        progresslog = open(DEFAULT_OUTPUT_LOG_DIR+DEFUALT_PROGRESS_FILE, "w")
+        progresslog.write("")
+        progresslog.close()
+
+        print("Creating /logs/devices base directory...")
+        os.makedirs(DEFAULT_OUTPUT_LOG_DIR+'devices')
+        print("Creating /logs/jobs base directory...")
+        os.makedirs(DEFAULT_OUTPUT_LOG_DIR + 'jobs')
+
+    else :
+        print("/logs Directory Found!")
+
+        if os.path.isdir(DEFAULT_OUTPUT_LOG_DIR + "/devices") is False:
+            print("/logs/devices NOT Found!")
+            print("Creating /logs/devices base directory...")
+            os.makedirs(DEFAULT_OUTPUT_LOG_DIR + 'devices')
+        else:
+            print("/logs/devices Directory Found!")
+        if os.path.isdir(DEFAULT_OUTPUT_LOG_DIR+"/jobs") is False:
+            print("/logs/jobs NOT Found!")
+            print("Creating /logs/jobs base directory...")
+            os.makedirs(DEFAULT_OUTPUT_LOG_DIR + 'jobs')
+        else:
+            print("/logs/jobs Directory Found!")
+
+        if os.path.isfile(DEFAULT_OUTPUT_LOG_DIR+DEFAULT_OUTPUT_FILE_NAME) is False:
+            print("Creating /logs/" + DEFAULT_OUTPUT_FILE_NAME + " file...")
+            mainlog = open(DEFAULT_OUTPUT_LOG_DIR + DEFAULT_OUTPUT_FILE_NAME, "w")
+            mainlog.write("")
+            mainlog.close()
+        else :
+            print("/logs/"+DEFAULT_OUTPUT_FILE_NAME + " file found!")
+
+        if os.path.isfile(DEFAULT_OUTPUT_LOG_DIR+DEFAULT_MESSAGES_FILE) is False:
+            print("Creating /logs/" + DEFAULT_MESSAGES_FILE + " file...")
+            mainlog = open(DEFAULT_OUTPUT_LOG_DIR + DEFAULT_MESSAGES_FILE, "w")
+            mainlog.write("")
+            mainlog.close()
+        else:
+            print("/logs/" + DEFAULT_MESSAGES_FILE + " file found!")
+
+        if os.path.isfile(DEFAULT_OUTPUT_LOG_DIR+DEFUALT_PROGRESS_FILE) is False:
+            print("Creating /logs/" + DEFUALT_PROGRESS_FILE + " file...")
+            mainlog = open(DEFAULT_OUTPUT_LOG_DIR + DEFUALT_PROGRESS_FILE, "w")
+            mainlog.write("")
+            mainlog.close()
+        else :
+            print("/logs/"+DEFUALT_PROGRESS_FILE + " file found!")
+
+    #except IOError:
+    #    print("Some Exception checking directories:")
+
+
+def create_file(filename,data=""):
+    #TODO
+    pass
+
+def create_uuid_log():
+    #TODO write up uuid log creation
+    # Must follow structure:
+    # > path:dev/sr#
+    # > name:device_name
+    # > -- new logs start here
+    # New log lines in format:
+    # timestamp:disc_title:(info_scanned)true/false,(ripped)true/false:
+    pass
 
 class main_return_subprocess_thread_Class(threading.Thread):
    def __init__(self):
@@ -808,6 +944,7 @@ class main_disk_check_thread_class(threading.Thread):
         logging.info("[END] Disk Check thread stopped!")
 
 def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDvd = True) :
+    check_app_files()
     print("folder tests: ")
     print("BASE_DIR", BASE_DIR)
     print("output_log_dir", DEFAULT_OUTPUT_LOG_DIR)
@@ -846,7 +983,7 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
         platform_lunix = False
 
     if platform_lunix :
-        clear_test_log()
+        clear_app_log()
         message_Logging_Queue.put([app_log_mesg,"Lunix Platform OS detected..."])
         time.sleep(1)
         #newLog = LogMessage(app_log_mesg, "Grabbing Device/Drive info:")

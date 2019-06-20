@@ -577,23 +577,7 @@ class main_logging_thread_Class(threading.Thread):
 def start() :
     message_Logging_Queue.put((app_log_mesg,"----------------\n"))
     message_Logging_Queue.put((app_log_mesg,"Starting App...\n"))
-    if BR_Device_List:
-        for device in BR_Device_List :
-            message_Logging_Queue.put((app_log_mesg,"Found and Added BR device: " + BR_Device_List[device].deviceName + " @ path: "+BR_Device_List[device].devicePath))
 
-    if DVD_Device_List:
-        for device in DVD_Device_List :
-            message_Logging_Queue.put((app_log_mesg,"Found and Added DVD device: " + DVD_Device_List[device].deviceName + " @ path: " + DVD_Device_List[device].devicePath))
-
-    #blkid /dev/sr0
-
-    if BR_Device_List:
-        message_Logging_Queue.put((app_log_mesg,"Checking BR devices for discs..."))
-        disk_Check_Queue.put(BR_Device_List)
-
-    if DVD_Device_List:
-        message_Logging_Queue.put((app_log_mesg, "Checking DVD devices for discs..."))
-        disk_Check_Queue.put(DVD_Device_List)
 
     #TODO Figure out simple thread to handle disc insert on any drive See below details (Line 588)
     '''
@@ -733,30 +717,35 @@ class main_drive_check_thread_Class(threading.Thread):
                 main_return_subprocess_thread.subprocess_return_thread.start()
                 logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
                 disk_check_first = subprocessResultsQueue.get()
-                subprocessResultsQueue.task_done()
-                logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
-                message_Logging_Queue.put([app_log_mesg,"Scanning disk: "+disk_check_first])
-                make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info',
-                                           'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
-                message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
-                logging.info("Make run command on dev: test path: " + str(make_disco_info_command))
-                subprocessReturnQueue.put(make_disco_info_command)
-                main_return_subprocess_thread = main_return_subprocess_thread_Class()
-                main_return_subprocess_thread.subprocess_return_thread.start()
-                logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
-                result = subprocessResultsQueue.get()
-                subprocessResultsQueue.task_done()
-                logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
-                message_Logging_Queue.put([make_log_mesg, result])
-                if diskCheckResultsQueue.empty() is False :
-                    dumpObject = diskCheckResultsQueue.get()
-                    logging.info("[Override] Disk check results queue...")
-                diskCheckResultsQueue.put(result)
-                #disk_Check_Queue.task_done()
-                #trigger_Shutdown()
+                print("Blkid",formatted_device_string,"return:",disk_check_first)
+                if disk_check_first is "" :
+                    print("Disk check returned nothing: ",disk_check_first)
+                else :
+                    subprocessResultsQueue.task_done()
+                    logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
+                    message_Logging_Queue.put([app_log_mesg,"Scanning disk: "+disk_check_first])
+                    make_disco_info_command = ['makemkvcon', '-r', '--cache=1', 'info',
+                                               'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
+                    message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
+                    logging.info("Make run command on dev: test path: " + str(make_disco_info_command))
+                    subprocessReturnQueue.put(make_disco_info_command)
+                    main_return_subprocess_thread = main_return_subprocess_thread_Class()
+                    main_return_subprocess_thread.subprocess_return_thread.start()
+                    logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
+                    result = subprocessResultsQueue.get()
+                    subprocessResultsQueue.task_done()
+                    logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
+                    message_Logging_Queue.put([make_log_mesg, result])
+                    print("Results printout after logging... >>> \n",result)
+                    '''if diskCheckResultsQueue.empty() is False :
+                        dumpObject = diskCheckResultsQueue.get()
+                        logging.info("[Override] Disk check results queue...")
+                    diskCheckResultsQueue.put(result)
+                    #disk_Check_Queue.task_done()
+                    #trigger_Shutdown()'''
             logging.info("[Sleeping] Disk check thread... 15s!")
-            test_output = disc_metaData(result).print_DiskInfo()
-            logging.info(">>>\n",test_output)
+            '''test_output = disc_metaData(result).print_DiskInfo()
+            logging.info(">>>\n",test_output)'''
             time.sleep(15)
 
         logging.info("[END] Return drive check thread stopped!")
@@ -892,25 +881,44 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
 
     for index in range(0,len(formatted_lines)):
         working_Object = formatted_lines[index]
-        if not found_bray and working_Object.__contains__("BDDVD") :
+        if working_Object.__contains__("BDDVD") :
             found_bray = True
             br_Device_Object = device_Object(working_Object)
             bray_dev = working_Object
-        elif not found_dvd and working_Object.__contains__("DVD") :
+            BR_Device_List[br_Device_Object.deviceName] = br_Device_Object
+            '''message_Logging_Queue.put(
+                (app_log_mesg, "Found and Added BR device: " + BR_Device_List[br_Device_Object].deviceName + " @ path: " +
+                 BR_Device_List[br_Device_Object].devicePath))
+            
+            message_Logging_Queue.put([app_log_mesg, br_Device_Object.print_Short_Raw()])'''
+        elif working_Object.__contains__("DVD") :
             found_dvd = True
             dvd_Device_Object = device_Object(working_Object)
+            DVD_Device_List[dvd_Device_Object.deviceName] = dvd_Device_Object
             dvd_dev = working_Object
+            '''message_Logging_Queue.put(
+                (app_log_mesg, "Found and Added DVD device: " + DVD_Device_List[dvd_Device_Object].deviceName + " @ path: " +
+                 DVD_Device_List[dvd_Device_Object].devicePath))
+            message_Logging_Queue.put([app_log_mesg, dvd_Device_Object.print_Short_Raw()])'''
 
-
+    '''
     if found_bray :
         message_Logging_Queue.put([app_log_mesg,"Found Blu-Ray device!"])
-        message_Logging_Queue.put([app_log_mesg, br_Device_Object.print_Short_Raw()])
-        BR_Device_List[br_Device_Object.deviceName] = br_Device_Object
+
+
     if found_dvd :
         message_Logging_Queue.put([app_log_mesg,"Found DVD device!"])
-        message_Logging_Queue.put([app_log_mesg, dvd_Device_Object.print_Short_Raw()])
-        DVD_Device_List[dvd_Device_Object.deviceName] = dvd_Device_Object
-        #print("Added to DVD list: "+DVD_Device_List[dvd_Device_Object.deviceName].print_Short_Raw())
+    '''
+
+    #blkid /dev/sr0
+
+    if BR_Device_List:
+        message_Logging_Queue.put((app_log_mesg,"Checking BR devices for discs..."))
+        disk_Check_Queue.put(BR_Device_List)
+
+    if DVD_Device_List:
+        message_Logging_Queue.put((app_log_mesg, "Checking DVD devices for discs..."))
+        disk_Check_Queue.put(DVD_Device_List)
 
     start()
     print("Finished init!")

@@ -1,6 +1,5 @@
 .idea/
-logs/**
-logs/test.log
+logs/
 private_data/
 main.py
 __pycache__/

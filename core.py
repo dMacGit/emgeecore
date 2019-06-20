@@ -377,13 +377,25 @@ class device_Object(object):
         Strips out raw data into usable variables
         :param data: the raw data as input
         '''
+
+        '''
+        Drive scan message format
+        DRV:index,visible,enabled,flags,drive name,disc name,disc path
+        index - drive index [0]
+        visible - set to 1 if drive is present <-- same as enabled? [?]
+        enabled - set to 1 if drive is accessible <-- same as visible? [?]
+        flags - media flags, see AP_DskFsFlagXXX in apdefs.h <---- 999 seems default! [?]
+        drive name - drive name string [4]
+        disc name - disc name string [5]
+        drive path - drive path string [6]
+        '''
         self.data = str(data).split(',')
         self.driveID = self.data[0]
         # 2nd Value Unknown
         # 3rd Value Unknown
         # 4th Value Unknown
         self.deviceName = self.data[4]
-        # 6th Value Unknown
+        self.deviceTitle = self.data[5]
         self.devicePath = self.data[6]
 
     def __str__(self):
@@ -597,6 +609,7 @@ def start() :
     '''
     '''[START] Refactor/re-write code'''    #<----------------- START
     #Wait on receving data
+    '''
     if diskCheckResultsQueue.empty() is False :
         logging.debug("[Blocking]{diskCheckResultsQueue} Start blocking on return call from diskCheckResultsQueue.get()")
         returned_data = diskCheckResultsQueue.get()
@@ -616,7 +629,7 @@ def start() :
         diskCheckResultsQueue.task_done()
 
     #newDisc.meta_parse(newDisc.raw)
-
+    '''
     logging.debug(
         "[END] Start function finished!")
 
@@ -689,21 +702,22 @@ class main_drive_check_thread_Class(threading.Thread):
 
     def stop(self):
         self._stop.set()
+        logging.info("[Termination] Return drive check thread stop triggered!")
 
     def stopped(self):
         return self._stop.isSet()
 
     def run(self):
         logging.info("[Running] driveCheck Thread Class started!")
+        logging.debug("[Blocking] driveCheck Thread Blocking on call to disk_Check_Queue.get()!")
+        devices_to_check = disk_Check_Queue.get()
+        logging.debug("[Released] driveCheck Thread released on call to disk_Check_Queue.get()!")
+        message_Logging_Queue.put([app_log_mesg, "Devices to check... {}".format(devices_to_check)])
+        message_Logging_Queue.put([app_log_mesg, "checking devices {}".format(devices_to_check)])
+        message_Logging_Queue.put([app_log_mesg, devices_to_check])
+        disk_Check_Queue.task_done()
+        result = ''
         while not self.stopped():
-            logging.debug("[Blocking] driveCheck Thread Blocking on call to disk_Check_Queue.get()!")
-            devices_to_check = disk_Check_Queue.get()
-            logging.debug("[Released] driveCheck Thread released on call to disk_Check_Queue.get()!")
-            message_Logging_Queue.put([app_log_mesg, "Devices to check... {}".format(devices_to_check)])
-            message_Logging_Queue.put([app_log_mesg,"checking devices {}".format(devices_to_check)])
-            message_Logging_Queue.put([app_log_mesg, devices_to_check])
-            disk_Check_Queue.task_done()
-
             for item in devices_to_check:
                 print(item)
             for device in devices_to_check:
@@ -734,11 +748,17 @@ class main_drive_check_thread_Class(threading.Thread):
                 subprocessResultsQueue.task_done()
                 logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
                 message_Logging_Queue.put([make_log_mesg, result])
+                if diskCheckResultsQueue.empty() is False :
+                    dumpObject = diskCheckResultsQueue.get()
+                    logging.info("[Override] Disk check results queue...")
                 diskCheckResultsQueue.put(result)
                 #disk_Check_Queue.task_done()
-                self.stop()
-                trigger_Shutdown()
-                logging.info("[Termination] Return drive check thread stop triggered!")
+                #trigger_Shutdown()
+            logging.info("[Sleeping] Disk check thread... 15s!")
+            test_output = disc_metaData(result).print_DiskInfo()
+            logging.info(">>>\n",test_output)
+            time.sleep(15)
+
         logging.info("[END] Return drive check thread stopped!")
 
 def clear_test_log () :
@@ -775,6 +795,28 @@ class main_return_subprocess_thread_Class(threading.Thread):
        subprocessReturnQueue.task_done()
        logging.info("[END] Return subprocess thread stopped!")
 
+
+class main_disk_check_thread_class(threading.Thread):
+    def __init__(self):
+        super(main_disk_check_thread_class, self).__init__()
+        self.main_disk_check_thread = Thread(target=self.run)
+        self._stop = threading.Event()
+        self.main_disk_check_thread.name = "main_disk_check_thread"
+        logging.info("Disk check thread Class Initialized!")
+
+    def stop(self):
+        print(">>> Stop has been called on Disk Check thread! <<<")
+        self._stop.set()
+
+    def stopped(self):
+
+        return self._stop.isSet()
+
+    def run(self):
+        logging.info("[Running] Disk Check Class Running!")
+        while self.stopped() is not True:
+            value = True
+        logging.info("[END] Disk Check thread stopped!")
 
 def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDvd = True) :
     print("folder tests: ")
@@ -922,6 +964,8 @@ def start_app_Threads():
     main_logging_thread.loggingThread.start()
 
 #Keep these here!
+main_disk_check_thread_class = main_disk_check_thread_class()
+
 main_logging_thread = main_logging_thread_Class()
 main_drive_check_thread = main_drive_check_thread_Class()
 

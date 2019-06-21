@@ -113,10 +113,13 @@ SHUTDOWN_TRIGGERED = False
 
 def get_current_timestamp_footer():
     # End notes on log files upon app exit
-    CURRENT_TIMESTAMP = str(datetime.datetime.now())
+    CURRENT_TIMESTAMP = get_current_timestamp()
     LOG_FILE_EXIT_FOOTER = "=== Media Grabber (Emgee) application exit @ " + CURRENT_TIMESTAMP + " ==="
     return LOG_FILE_EXIT_FOOTER
 
+def get_current_timestamp():
+    # Used to get timestamp
+    return str(datetime.datetime.now())
 
 # def return_str_tracks(dictionary):
 #     titles = dict(dictionary).keys()
@@ -406,6 +409,7 @@ class device_Object(object):
         self.devicePath = self.data[6]
         self.uuid = ""
         self.cached = False
+        self.ripped = False
         self.raw = ""
 
     def getName(self):
@@ -418,7 +422,7 @@ class device_Object(object):
         return self.devicePath
 
     def getTitle(self):
-        if self.deviceTitle.__contains__("") is False :
+        if len(self.deviceTitle) > 2:
             logging.info("({} - {}) Has title: {}".format(self.devicePath, self.deviceName, self.deviceTitle))
             return self.deviceTitle
         logging.info("({} - {}) Has no title".format(self.devicePath, self.deviceName))
@@ -432,11 +436,17 @@ class device_Object(object):
         self.uuid = id
 
     def getUUID(self):
-        if self.uuid.__contains__("") is False :
-            logging.info("({} - {}) Has UUID: {}".format(self.devicePath, self.deviceName, self.uuid))
+        if len(self.uuid) > 2:
+            logging.info("[Object-Device]({} - {}) Has UUID: {}".format(self.devicePath, self.deviceName, self.uuid))
             return self.uuid
-        logging.info("({} - {}) Has no UUID".format(self.devicePath, self.deviceName))
+        logging.info("[Object-Device]({} - {}) Has no UUID".format(self.devicePath, self.deviceName))
         return False
+
+    def setIsRipped(self,isRipped):
+        self.ripped = isRipped
+
+    def isRipped(self):
+        return self.ripped
 
     def setIsCached(self,isCached):
         self.cached = isCached
@@ -454,7 +464,7 @@ class device_Object(object):
         Prints out the raw values to a string (No added comments etc)
         :return: A string with the raw output values
         '''
-        returned_value = "" + self.driveID + "," + self.deviceName + "," + self.devicePath
+        returned_value = "{},{},{},{},{}".format(self.driveID,self.deviceName,self.devicePath,self.uuid,self.deviceTitle)
         return returned_value
 
 
@@ -755,8 +765,9 @@ class main_drive_check_thread_Class(threading.Thread):
             message_Logging_Queue.put([app_log_mesg, dvd_devices_to_check])
         disk_Check_Queue.task_done()
         result = ''
-        itemCount = 0
+
         while not self.stopped():
+            itemCount = 0
             for item in devices_to_check:
                 print("item {} : {}".format(itemCount,item))
                 itemCount += 1
@@ -787,7 +798,7 @@ class main_drive_check_thread_Class(threading.Thread):
                         parsed_title = split_string[2].split('"')[1]
                         device_value.setUUID(parsed_uuid)
                         device_value.setTitle(parsed_title)
-
+                        print("Testing presets: {}".format(device_value.print_Short_Raw()))
                     if device_value.isCached() is False :
                         logging.debug("[Released]{Subprocess} driveCheck Thread Released on call to subprocessResultsQueue.get()!")
                         message_Logging_Queue.put([app_log_mesg,"Scanning disk: "+disk_check_first])
@@ -806,6 +817,8 @@ class main_drive_check_thread_Class(threading.Thread):
                         device_value.setRaw(result)
                         device_value.setIsCached(True)
                         devices_to_check[device] = device_value
+                        print("Checking cached title: {}".format(device_value.getTitle()))
+                        write_uuid_log(device_value)
                         logging.info("[Done] Device {} : {} Is now Cached!".format(device_value.getPath(),
                                                                                        device_value.getName()))
                     else :
@@ -962,16 +975,25 @@ def write_uuid_log(drive):
     if type(drive) is device_Object :
         if os.path.isfile(DEFAULT_DEVICES_LOG_DIR+drive.uuid+'.log') is False :
             print(drive.uuid + ".log doesn't exist! Creating new file...")
-            #Create new file
+            '''Create new file:
+                *For new lines, first two are details on device. 
+                path:"/dev/sr0"
+                name:"BD-RE Test Device"
+                *Following lines are timestamps with task done, Scanned(True/False), Ripped(True/False)
+                "2019-06-23 17:42:06.5634234","False","False"
+                Format update lines with surrounded quotes " (Double quotes) and separate with , (Commas).
+            '''
             with open(DEFAULT_DEVICES_LOG_DIR+drive.uuid+'.log', 'w') as file :
-                file.write('path:'+drive.path+'\nname:'+drive.name+'\n'+get_current_timestamp_footer()+':'+drive.scanned+':'+drive.ripped)
+                outputString = 'path:{}\nname:{}\n"{}","{}","{}","{}"'.format(str(drive.getPath()),str(drive.getName()),get_current_timestamp(),str(drive.getTitle()),str(drive.isCached()),str(drive.isRipped()))
+                file.write(outputString)
                 file.close()
             print("...completed")
         else :
             print(drive.uuid+'.log exists!')
             print("updating...")
-            with open(DEFAULT_DEVICES_LOG_DIR+drive.uuid+'.log', 'w') as file :
-                file.write(get_current_timestamp_footer()+':'+drive.scanned+':'+drive.ripped)
+            with open(DEFAULT_DEVICES_LOG_DIR+drive.uuid+'.log', 'a') as file :
+                outputString = '\n"{}","{}","{}","{}"'.format(get_current_timestamp(),str(drive.getTitle()),str(drive.isCached()),str(drive.isRipped()))
+                file.write(outputString)
                 file.close()
             print("...completed")
 

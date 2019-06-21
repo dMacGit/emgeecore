@@ -854,10 +854,11 @@ def clear_app_logs (driveLogs=CLEAR_DRIVE_LOGS_ONSTART) :
     if driveLogs :
         for file in os.listdir(DEFAULT_DEVICES_LOG_DIR):
             print("found "+str(file))
-            #try :
-            #    os.remove()
-            #except Exception as e:
-            #    print("Error deleting device log files!",e)
+            try :
+                os.remove()
+                print("{} Deleted".format(str(file)))
+            except Exception as e:
+                print("Error deleting device log files!",e)
 
 
 
@@ -963,13 +964,33 @@ def create_file(filename,data=""):
     pass
 
 def write_uuid_log(drive):
-    #TODO write up uuid log creation
-    # Must follow structure:
-    # > path:dev/sr#
-    # > name:device_name
-    # > -- new logs start here
-    # New log lines in format:
-    # timestamp:disc_title:(info_scanned)true/false,(ripped)true/false:
+    """ Writing out device logs to a file using uuid value as name.
+
+    This function saves usefull state information regarding the device to a file, using its specific uuid.
+    Note: Mainly a future proofing move, as currently not referencing device state from file,
+     as it is in application memory/cache.
+
+    Parameters
+    ----------
+    drive : device_Object, required
+            Object containing all parameters, and current state information.
+
+    Returns
+    -------
+    N/A
+
+    Useful Info
+    -----------
+    Parameters stored & "uuid##.log" file structure follows below:
+
+    path:dev/sr#
+    name:device_name
+    > -- new logs start here
+
+    New log lines in format:
+    "timestamp","disc_title",(info_scanned/cached)"true/false",(ripped)"true/false"
+
+    """
 
     # Checkg DriveObject is correct type
     if type(drive) is device_Object :

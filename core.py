@@ -979,16 +979,18 @@ def write_uuid_log(drive):
     -------
     N/A
 
-    Useful Info
-    -----------
-    Parameters stored & "uuid##.log" file structure follows below:
+    ++++++++++
+    UUID.log file Structure details below.
 
-    path:dev/sr#
-    name:device_name
-    > -- new logs start here
+    Filename uses device uuid -> "uuid##.log"
+    File contents start with device details in first two (2) lines, then third (3rd) line onwards is device state logs.
 
-    New log lines in format:
-    "timestamp","disc_title",(info_scanned/cached)"true/false",(ripped)"true/false"
+    path:"/dev/sr0"
+    name:"BD-RE Test Device"
+    
+    *Following lines start with timestamp then, Title, Cached(True/False), Ripped(True/False)
+    "2019-06-23 17:42:06.5634234","BATMAN","False","False"
+    Format update lines with surrounded quotes " (Double quotes) and separate with , (Commas).
 
     """
 

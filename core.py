@@ -5,7 +5,6 @@ from queue import Queue
 from subprocess import Popen, PIPE
 from enum import Enum
 
-import asyncio
 import threading
 import datetime
 import subprocess
@@ -14,60 +13,65 @@ import time
 import os
 import meta_search
 
+# Priority queue for sending data/info/messages to threads
 message_Logging_Queue = Queue()
 subprocessQueue = Queue()
 subprocessCommandQueue = Queue()
 disk_Check_Queue = Queue()
 
-
-# special queues to pass data/results back from subprocess/diskCheck threads to main
+# Queues to pass data/results back from subprocess/diskCheck threads
 subprocessResultsQueue = Queue()
 diskCheckResultsQueue = Queue()
-
-
 returned_Data_Queue = Queue()
 
+# Setting up logging config
 logging.basicConfig(level=logging.DEBUG,format='(%(threadName)-10s) %(message)s',)
 
+
+## App configs
+
+# Home path
 USER_HOME = str(Path.home())
 
 platform_lunix = False
 
-#Important thread classes
-
-
-# App configs
-
-# While still testing named "test.log. Change to "makemkvcon.log" later
+# Application debug log file
 DEFAULT_OUTPUT_FILE_NAME = 'debug.log'
+# MakeMkvcon progress log (rip %)
 DEFUALT_PROGRESS_FILE = 'progress.log'
+# MakeMkvcon Messages log (Basically its log file)
 DEFAULT_MESSAGES_FILE ='messages.log'
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-DEFAULT_OUTPUT_LOG_DIR = os.path.join(BASE_DIR, 'logs/') #'/logs'
+# Root logs directory
+DEFAULT_OUTPUT_LOG_DIR = os.path.join(BASE_DIR, 'logs/')
+# Devices sub directory
 DEFAULT_DEVICES_LOG_DIR = DEFAULT_OUTPUT_LOG_DIR+'devices/'
+# Jobs sub directory
 DEFAULT_JOBS_LOG_DIR = DEFAULT_OUTPUT_LOG_DIR+'jobs/'
+# MakeKkvcon Message file log
 DEFAULT_OUTPUT_FILE_PATH = DEFAULT_OUTPUT_LOG_DIR
-DEFAULT_PROGRESS_FILE_DIR = DEFAULT_OUTPUT_FILE_PATH # Progress file
-DEFAULT_PROGRESS_FILE_RELATIVE_PATH = DEFAULT_PROGRESS_FILE_DIR+DEFUALT_PROGRESS_FILE
 DEFAULT_MESSAGES_FILE_RELATIVE_PATH = DEFAULT_OUTPUT_FILE_PATH+DEFAULT_MESSAGES_FILE
+# MakeMkvcon Progress file log
+DEFAULT_PROGRESS_FILE_DIR = DEFAULT_OUTPUT_FILE_PATH
+DEFAULT_PROGRESS_FILE_RELATIVE_PATH = DEFAULT_PROGRESS_FILE_DIR+DEFUALT_PROGRESS_FILE
 
-#Setting custom profile for makemkv to use
+# Setting custom profile for makemkv to use
 makeMkv_profile_dir = USER_HOME+"/.MakeMKV/"
 makeMkv_profile_file = "phantoms.mmcp.xml" #This is some profile to match your ripping requirements
 makeMkv_profile_options = "--profile=" + makeMkv_profile_dir + makeMkv_profile_file
 
-#Setting --progress & --messages command args for makemkv to use
+# Setting --progress & --messages command args for makemkv to use
 makeMkv_progress_command = '--progress="'+DEFAULT_PROGRESS_FILE_RELATIVE_PATH+'"'
 makeMkv_messages_option = '--messages="'+DEFAULT_MESSAGES_FILE_RELATIVE_PATH+'"'
 
-#Setting MakeMkv target media folder
+# Setting MakeMkv target media folder
 makeMkv_media_dest_dir = "/media/media/Rips"
 
 
-#Command to rip first title on dev:/dev/sr01 using profile
-#makemkvcon --profile=makeMkv_profile_dir + makeMkv_profile_file+"mkv dev:/dev/sr0 0 /media/media/Rips"
+# Command to rip first title on dev:/dev/sr01 using profile
+# makemkvcon --profile=makeMkv_profile_dir + makeMkv_profile_file+"mkv dev:/dev/sr0 0 /media/media/Rips"
 
 
 # Search parameters:
@@ -381,7 +385,7 @@ class disc_metaData(object):
 class device_Object(object):
     '''
     Device object
-    - Hold info about a device that is found on computer
+    - Hold info about a optical device that is found on host machine
     '''
     def __init__(self, data):
         '''
@@ -677,7 +681,6 @@ def start() :
 
 def start_title_rip(newDisc):
 
-
     print("===Media Type confirmed: ", newDisc.get_Media_Type(), "===")
     # print(tempObject.print_DiskInfo())
     # print(tempObject.print_VideoTrackInfo())
@@ -866,8 +869,6 @@ def clear_app_logs (driveLogs=CLEAR_DRIVE_LOGS_ONSTART) :
 def check_app_files():
     #TODO Need to check for required log files to run application. Create if not found!
     '''
-
-
         /logs:
         messages.log
         progress.log

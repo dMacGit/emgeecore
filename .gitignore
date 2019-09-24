@@ -1,5 +1,6 @@
 *.pyc
 .idea/
+.vscode/
 logs/
 private_data/
 main.py

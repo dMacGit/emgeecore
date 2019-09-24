@@ -5,6 +5,7 @@ from queue import Queue
 from subprocess import Popen, PIPE
 from enum import Enum
 
+import asyncio
 import threading
 import datetime
 import subprocess
@@ -668,12 +669,11 @@ def start() :
             "[Released]{diskCheckResultsQueue} :: ERROR :: Start released from diskCheckResultsQueue.get()!")
         diskCheckResultsQueue.task_done()
 
-    #newDisc.meta_parse(newDisc.raw)
-    '''
-    logging.debug(
-        "[END] Start function finished!")
+    newDisc.meta_parse(newDisc.raw)'''
+    
+    logging.debug("[END] Start function finished!")
 
-    '''[END] Refactor/re-write code'''  #<------------------- END
+    #[END] Refactor/re-write code  #<------------------- END
 
 def start_title_rip(newDisc):
 
@@ -987,7 +987,7 @@ def write_uuid_log(drive):
 
     path:"/dev/sr0"
     name:"BD-RE Test Device"
-    
+
     *Following lines start with timestamp then, Title, Cached(True/False), Ripped(True/False)
     "2019-06-23 17:42:06.5634234","BATMAN","False","False"
     Format update lines with surrounded quotes " (Double quotes) and separate with , (Commas).
@@ -1048,7 +1048,7 @@ class main_return_subprocess_thread_Class(threading.Thread):
        subprocessReturnQueue.task_done()
        logging.info("[END] Return subprocess thread stopped!")
 
-
+'''
 class main_disk_check_thread_class(threading.Thread):
     def __init__(self):
         super(main_disk_check_thread_class, self).__init__()
@@ -1070,6 +1070,7 @@ class main_disk_check_thread_class(threading.Thread):
         while self.stopped() is not True:
             value = True
         logging.info("[END] Disk Check thread stopped!")
+'''
 
 def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDvd = True) :
     check_app_files()
@@ -1198,7 +1199,7 @@ def shutdown():
         Trigger stopping of program
         - Stopping main longest running thread first.
     """
-
+    print("Application thread exited, Main Drive Checked Thread Shutting down")
     while main_logging_thread.stopped() is not True:
         if main_drive_check_thread.stopped() is True:
             message_Logging_Queue.put("Terminating Programe")
@@ -1231,14 +1232,46 @@ def shutdown():
 
     print("End of program!")
 
+class main_application_thread_Class(threading.Thread):
+   def __init__(self):
+       super(main_application_thread_Class, self).__init__()
+       self.application_thread = Thread(target=self.run)
+       self._stop = threading.Event()
+       self.application_thread.name = "applicationThread"
+
+   def stop(self):
+       self._stop.set()
+
+   def stopped(self):
+       return self._stop.isSet()
+
+   def run(self):
+        message_Logging_Queue.put((app_log_mesg,"[START] Application thread starting up!"))
+        while self.stopped() is False:
+            print("Sleeping Application Thread (45 Seconds), then shutting down")
+            time.sleep(45)
+            self.stop()
+               
+        message_Logging_Queue.put((app_log_mesg,"[END] Application thread stopped!"))
+        main_drive_check_thread.stop()
+        shutdown()
+
 def start_app_Threads():
+    main_application_thread.application_thread.start()
+
     main_drive_check_thread.drive_Check_Thread.start()
 
     main_logging_thread.loggingThread.start()
 
-#Keep these here!
-main_disk_check_thread_class = main_disk_check_thread_class()
+'''
+    Commented out main_disk_check_thread_class as not currently in use
+    TODO: Need to remove this in future
 
+    #main_disk_check_thread_class = main_disk_check_thread_class()
+'''
+
+#Keep these here!
+main_application_thread = main_application_thread_Class()
 main_logging_thread = main_logging_thread_Class()
 main_drive_check_thread = main_drive_check_thread_Class()
 

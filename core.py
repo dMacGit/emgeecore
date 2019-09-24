@@ -16,7 +16,7 @@ import meta_search
 
 message_Logging_Queue = Queue()
 subprocessQueue = Queue()
-subprocessReturnQueue = Queue()
+subprocessCommandQueue = Queue()
 disk_Check_Queue = Queue()
 
 
@@ -719,19 +719,19 @@ def start_title_rip(newDisc):
                         'disc:' + str(0), str(selected_title_index),makeMkv_media_dest_dir]
     disc = 0
     print(make_rip_command)
-    subprocessReturnQueue.put(make_rip_command)
-    main_return_subprocess_thread = main_return_subprocess_thread_Class()
-    main_return_subprocess_thread.subprocess_return_thread.start()
+    subprocessCommandQueue.put(make_rip_command)
+    main_subprocess_thread = main_subprocess_thread_Class()
+    main_subprocess_thread.subprocess_thread.start()
     results = subprocessResultsQueue.get()
     subprocessResultsQueue.task_done()
     print(results)
 
-'''
+"""
     Drive checking thread.
     - Currently this is checking queue of devices.
     - Also is looping untill stopped. Need to change this to 
     just check and then terminate once done.
-'''
+"""
 class main_drive_check_thread_Class(threading.Thread):
     def __init__(self):
         super(main_drive_check_thread_Class, self).__init__()
@@ -780,9 +780,9 @@ class main_drive_check_thread_Class(threading.Thread):
                 formatted_device_string = device_value.devicePath.replace("\"", "")
                 check_for_disk_command = ['blkid', '' + formatted_device_string]
                 message_Logging_Queue.put([app_log_mesg, "Running command ... " + str(check_for_disk_command)])
-                subprocessReturnQueue.put(check_for_disk_command)
-                main_return_subprocess_thread = main_return_subprocess_thread_Class()
-                main_return_subprocess_thread.subprocess_return_thread.start()
+                subprocessCommandQueue.put(check_for_disk_command)
+                main_subprocess_thread = main_subprocess_thread_Class()
+                main_subprocess_thread.subprocess_thread.start()
                 logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
                 disk_check_first = subprocessResultsQueue.get()
                 print("Blkid",formatted_device_string,"return:",disk_check_first)
@@ -806,9 +806,9 @@ class main_drive_check_thread_Class(threading.Thread):
                                                    'dev:' + formatted_device_string,makeMkv_profile_options, makeMkv_progress_command]
                         message_Logging_Queue.put([app_log_mesg, "Make run command on dev: test path: " + str(make_disco_info_command)])
                         logging.info("Make run command on dev: test path: " + str(make_disco_info_command))
-                        subprocessReturnQueue.put(make_disco_info_command)
-                        main_return_subprocess_thread = main_return_subprocess_thread_Class()
-                        main_return_subprocess_thread.subprocess_return_thread.start()
+                        subprocessCommandQueue.put(make_disco_info_command)
+                        main_subprocess_thread = main_subprocess_thread_Class()
+                        main_subprocess_thread.subprocess_thread.start()
                         logging.debug("[Blocking]{Subprocess} driveCheck Thread Blocking on call to subprocessResultsQueue.get()!")
                         result = subprocessResultsQueue.get()
                         subprocessResultsQueue.task_done()
@@ -1021,32 +1021,41 @@ def write_uuid_log(drive):
             print("...completed")
 
 
-class main_return_subprocess_thread_Class(threading.Thread):
-   def __init__(self):
-       super(main_return_subprocess_thread_Class, self).__init__()
-       self.subprocess_return_thread = Thread(target=self.run)
-       self._stop = threading.Event()
-       self.subprocess_return_thread.name = "subprocess_return_thread"
+class main_subprocess_thread_Class(threading.Thread):
+    """
+        Subprocess Handler Thread
 
-   def stop(self):
-       self._stop.set()
+        This thread handles commands; send to, and results returned from, the command line.
+        It reads the subprocessCommandQueue (Blocking get() call) and runs these commands.
+        Once done it processes the results and finaly places them onto the subprocessResultsQueue
+        for other threads to use.
+        subprocessCommandQueue.task_done() is then called to free up Queue.
+    """
+    def __init__(self):
+        super(main_subprocess_thread_Class, self).__init__()
+        self.subprocess_thread = Thread(target=self.run)
+        self._stop = threading.Event()
+        self.subprocess_thread.name = "subprocess_thread"
 
-   def stopped(self):
-       return self._stop.isSet()
+    def stop(self):
+        self._stop.set()
 
-   def run(self):
-       logging.debug("[Blocking] Subprocess thread blocking on subprocessReturnQueue.get() call!")
-       process = subprocessReturnQueue.get()
-       logging.debug("[Released] Subprocess thread released from subprocessReturnQueue.get() call!")
-       p = subprocess.Popen(process, stdout=PIPE)
-       #while p.returncode is None:
-       returned_data = (p.communicate()[0])
+    def stopped(self):
+        return self._stop.isSet()
 
-       message_Logging_Queue.put([app_log_mesg, "== Executed Command without error! =="])
-       formatted_data = returned_data.decode('ascii').replace("'", "")
-       subprocessResultsQueue.put(formatted_data)
-       subprocessReturnQueue.task_done()
-       logging.info("[END] Return subprocess thread stopped!")
+    def run(self):
+        logging.debug("[Blocking] Subprocess thread blocking on subprocessCommandQueue.get() call!")
+        process = subprocessCommandQueue.get()
+        logging.debug("[Released] Subprocess thread released from subprocessCommandQueue.get() call!")
+        p = subprocess.Popen(process, stdout=PIPE)
+        #while p.returncode is None:
+        returned_data = (p.communicate()[0])
+
+        message_Logging_Queue.put([app_log_mesg, "== Executed Command without error! =="])
+        formatted_data = returned_data.decode('ascii').replace("'", "")
+        subprocessResultsQueue.put(formatted_data)
+        subprocessCommandQueue.task_done()
+        logging.info("[END] Return subprocess thread stopped!")
 
 '''
 class main_disk_check_thread_class(threading.Thread):
@@ -1073,6 +1082,17 @@ class main_disk_check_thread_class(threading.Thread):
 '''
 
 def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDvd = True) :
+    """ Initialize function
+
+        Checks OS type, Runs Make command to scan all drives.
+        Determines drive type and Maps found drive to correct device Queue.
+
+        Args:
+            search_bluray: Blueray search Flag
+            search_Dvd: Dvd search Flag
+            search_Cd: CD search Flag
+            search_altDvd: Alt DVD Flag (????)
+    """
     check_app_files()
     print("folder tests: ")
     print("BASE_DIR", BASE_DIR)
@@ -1085,18 +1105,6 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
     print("makeMkv_profile_options", makeMkv_profile_options)
     print("makeMkv_media_dest_dir", makeMkv_media_dest_dir)
 
-    """Initialize function
-
-        Main entry point into program.
-        Checks OS type, Runs Make command to scan all drives.
-        Determines drive type and Maps found drive to correct device Queue.
-
-        Args:
-            search_bluray: Blueray search Flag
-            search_Dvd: Dvd search Flag
-            search_Cd: CD search Flag
-            search_altDvd: Alt DVD Flag (????)
-    """
 
     #Check for subprocess module (Linux OS library)
     if platform == "linux" or platform == "linux2":
@@ -1120,9 +1128,9 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
         #newLog = LogMessage(app_log_mesg, "Lunix Platform OS detected...")
         message_Logging_Queue.put([app_log_mesg,"==============================="])
         find_devices_command = ["makemkvcon", "-r", "--cache=1", "info", "disc:9999",makeMkv_profile_options]
-        subprocessReturnQueue.put(find_devices_command)
-        main_return_subprocess_thread = main_return_subprocess_thread_Class()
-        main_return_subprocess_thread.subprocess_return_thread.start()
+        subprocessCommandQueue.put(find_devices_command)
+        main_subprocess_thread = main_subprocess_thread_Class()
+        main_subprocess_thread.subprocess_thread.start()
         #create_folder()
 
         result = subprocessResultsQueue.get()
@@ -1191,13 +1199,16 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
 
 
 def trigger_Shutdown():
+    """ Trigger_Shutdown function [DEPRECATED]
+        - Need to remove.
+    """
     SHUTDOWN_TRIGGERED = True
 
 
 def shutdown():
-    """
-        Trigger stopping of program
-        - Stopping main longest running thread first.
+    """ Trigger stopping of program
+        - Waits untill drive check thread stopped first (Process heavy).
+        - Stops/joins all threads and queues, and tidy's up.
     """
     print("Application thread exited, Main Drive Checked Thread Shutting down")
     while main_logging_thread.stopped() is not True:
@@ -1217,8 +1228,8 @@ def shutdown():
             and wait for it to end then close other threads.
     """
     ### After stopping call join, on each thread, which waits to handle termination
-    subprocessReturnQueue.join()
-    logging.info("[SHUTDOWN] subprocessReturnQueue joined!")
+    subprocessCommandQueue.join()
+    logging.info("[SHUTDOWN] subprocessCommandQueue joined!")
     subprocessResultsQueue.join()
     logging.info("[SHUTDOWN] subprocessResultsQueue joined!")
     subprocessQueue.join()
@@ -1233,27 +1244,45 @@ def shutdown():
     print("End of program!")
 
 class main_application_thread_Class(threading.Thread):
-   def __init__(self):
-       super(main_application_thread_Class, self).__init__()
-       self.application_thread = Thread(target=self.run)
-       self._stop = threading.Event()
-       self.application_thread.name = "applicationThread"
+    """
+        Main Application Running Thread.
 
-   def stop(self):
-       self._stop.set()
+        This will handle all interfacing to user/automation of ripping, and encoding,
+        and managing job threads.
 
-   def stopped(self):
-       return self._stop.isSet()
+        Currently in testing: Is just sleeping for 45 seconds (Enough to populate application cache etc) 
+        and then shutdown.
+    """
+    def __init__(self):
+        super(main_application_thread_Class, self).__init__()
+        self.application_thread = Thread(target=self.run)
+        self._stop = threading.Event()
+        self.application_thread.name = "applicationThread"
 
-   def run(self):
+    def stop(self):
+        self._stop.set()
+
+    def stopped(self):
+        return self._stop.isSet()
+
+    def run(self):
         message_Logging_Queue.put((app_log_mesg,"[START] Application thread starting up!"))
         while self.stopped() is False:
+            """
+                Below code a placeholder untill main logic implemented
+
+                TODO: Need to loop over device UUID files/logs OR cache and find un-ripped titles.
+                        Then proceed to create rip_threads to run makemkv on title/device.
+                        Note: MUST limit one thread per device.
+            """
             print("Sleeping Application Thread (45 Seconds), then shutting down")
             time.sleep(45)
             self.stop()
-               
+        #Proceed to shutdown process to exit application/program       
         message_Logging_Queue.put((app_log_mesg,"[END] Application thread stopped!"))
+        #Need to manually trigger drive thread to stop
         main_drive_check_thread.stop()
+        #Calling Shutdown function
         shutdown()
 
 def start_app_Threads():

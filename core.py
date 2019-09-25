@@ -4,6 +4,7 @@ from threading import Thread
 from queue import Queue
 from subprocess import Popen, PIPE
 from enum import Enum
+import prctl
 
 import threading
 import datetime
@@ -11,7 +12,7 @@ import subprocess
 import logging
 import time
 import os
-import meta_search
+#import meta_search
 
 # Priority queue for sending data/info/messages to threads
 message_Logging_Queue = Queue()
@@ -57,17 +58,21 @@ DEFAULT_MESSAGES_FILE_RELATIVE_PATH = DEFAULT_OUTPUT_FILE_PATH+DEFAULT_MESSAGES_
 DEFAULT_PROGRESS_FILE_DIR = DEFAULT_OUTPUT_FILE_PATH
 DEFAULT_PROGRESS_FILE_RELATIVE_PATH = DEFAULT_PROGRESS_FILE_DIR+DEFUALT_PROGRESS_FILE
 
+test_message_file = "--messages=/media/phantom/My Files/Documents/Python Projects/Emgee_Core/logs/messages.log"
+test_progress_file = "--progress=/media/phantom/My Files/Documents/Python Projects/Emgee_Core/logs/progress.log"
+test_profile_file = "--profile=/media/phantom/My Files/Documents/Python Projects/Emgee_Core/phantoms.mmcp.xml"
+
 # Setting custom profile for makemkv to use
-makeMkv_profile_dir = USER_HOME+"/.MakeMKV/"
-makeMkv_profile_file = "phantoms.mmcp.xml" #This is some profile to match your ripping requirements
-makeMkv_profile_options = "--profile=" + makeMkv_profile_dir + makeMkv_profile_file
+makeMkv_profile_dir = BASE_DIR
+makeMkv_profile_file = 'phantoms.mmcp.xml' #This is some profile to match your ripping requirements
+makeMkv_profile_options = '--profile=' + makeMkv_profile_dir+'/'+makeMkv_profile_file
 
 # Setting --progress & --messages command args for makemkv to use
 makeMkv_progress_command = '--progress="'+DEFAULT_PROGRESS_FILE_RELATIVE_PATH+'"'
 makeMkv_messages_option = '--messages="'+DEFAULT_MESSAGES_FILE_RELATIVE_PATH+'"'
 
 # Setting MakeMkv target media folder
-makeMkv_media_dest_dir = "/media/media/Rips"
+makeMkv_media_dest_dir = '/media/media/Rips'
 
 
 # Command to rip first title on dev:/dev/sr01 using profile
@@ -383,14 +388,18 @@ class disc_metaData(object):
         return returned_string
 
 class device_Object(object):
-    '''
+    """
     Device object
     - Hold info about a optical device that is found on host machine
-    '''
+    """
     def __init__(self, data):
         '''
         Strips out raw data into usable variables
         :param data: the raw data as input
+
+        NOTE:   This holds UUID, path and device name.
+                Also hold basic details about current loaded disc, such as Title, and isRipped & isCached flags.
+                IMPORTANT: THIS DOESN'T HOLD DISC METADATA OR TITLE INFO!!!
         '''
 
         '''
@@ -569,6 +578,7 @@ class main_logging_thread_Class(threading.Thread):
         self.loggingThread = Thread(target=self.run)
         self._stop = threading.Event()
         self.loggingThread.name = "loggingThread"
+        prctl.set_name("loggingThread")
         logging.info("Logging Class Initialized!")
 
     def stop(self):
@@ -720,11 +730,13 @@ def start_title_rip(newDisc):
     print("Selected track:",selected_title_index)'''
     make_rip_command = ['makemkvcon', makeMkv_profile_options, makeMkv_messages_option, makeMkv_progress_command, 'mkv',
                         'disc:' + str(0), str(selected_title_index),makeMkv_media_dest_dir]
+    test_rip_command = ['makemkvcon',test_profile_file, test_message_file, test_progress_file, 'mkv', 'disc:' + str(0), str(selected_title_index), makeMkv_media_dest_dir]
     disc = 0
-    print(make_rip_command)
-    subprocessCommandQueue.put(make_rip_command)
-    main_subprocess_thread = main_subprocess_thread_Class()
-    main_subprocess_thread.subprocess_thread.start()
+    print(test_rip_command)
+    subprocessCommandQueue.put(test_rip_command)
+    rip_subprocess_thread = main_subprocess_thread_Class()
+    rip_subprocess_thread.setName("rip_subprocess_thread")
+    rip_subprocess_thread.subprocess_thread.start()
     results = subprocessResultsQueue.get()
     subprocessResultsQueue.task_done()
     print(results)
@@ -829,10 +841,8 @@ class main_drive_check_thread_Class(threading.Thread):
                     #print("Results printout after logging... >>> \n",result)
                     '''if diskCheckResultsQueue.empty() is False :
                         dumpObject = diskCheckResultsQueue.get()
-                        logging.info("[Override] Disk check results queue...")
+                        logging.info("[Override] Disk check results queue...")'''
                     diskCheckResultsQueue.put(result)
-                    #disk_Check_Queue.task_done()
-                    #trigger_Shutdown()'''
             logging.info("[Sleeping] Disk check thread... 15s!")
             '''test_output = disc_metaData(result).print_DiskInfo()
             logging.info(">>>\n",test_output)'''
@@ -1049,6 +1059,7 @@ class main_subprocess_thread_Class(threading.Thread):
         process = subprocessCommandQueue.get()
         logging.debug("[Released] Subprocess thread released from subprocessCommandQueue.get() call!")
         p = subprocess.Popen(process, stdout=PIPE)
+        logging.debug(process)
         #while p.returncode is None:
         returned_data = (p.communicate()[0])
 
@@ -1200,10 +1211,13 @@ def initialize(search_bluray=True,search_Dvd=True, search_Cd=False, search_altDv
 
 
 def trigger_Shutdown():
-    """ Trigger_Shutdown function [DEPRECATED]
-        - Need to remove.
+    """ Trigger_Shutdown function
+        -   Sets shutdown flag.
+        -   Application Threads detects flag and starts shutdown process
     """
     SHUTDOWN_TRIGGERED = True
+    logging.info("User Triggered Shutdown! "+str(SHUTDOWN_TRIGGERED))
+    main_application_thread.stop()
 
 
 def shutdown():
@@ -1217,6 +1231,7 @@ def shutdown():
             message_Logging_Queue.put("Terminating Programe")
             message_Logging_Queue.join()
             main_logging_thread.stop()
+
             message_Logging_Queue.put("Terminating logging queue")
 
     print("finished waiting on main_logging thread! Is not not alive")
@@ -1268,7 +1283,49 @@ class main_application_thread_Class(threading.Thread):
 
     def run(self):
         message_Logging_Queue.put((app_log_mesg,"[START] Application thread starting up!"))
+        print("Sleeping Application Thread (30 Seconds)")
+        time.sleep(30)
         while self.stopped() is False:
+            print("Sleeping Application Thread (15 Seconds)")
+            time.sleep(15)
+            '''for device in BR_Device_List :
+                temp_device_Object = BR_Device_List[device]
+                logging.debug("Device on path {}, with title {} chached status of {}".format(temp_device_Object.getPath(),temp_device_Object.getTitle(),temp_device_Object.isCached()))
+                if temp_device_Object.isRipped() is False :
+                    temp_device_Object.setIsRipped(True)
+                    start_title_rip(temp_device_Object)'''
+            # Wait on receving data
+            '''
+            if diskCheckResultsQueue.empty() is False :
+                logging.debug("[Blocking]{diskCheckResultsQueue} Application_thread blocking on return call from diskCheckResultsQueue.get()")
+                returned_data = diskCheckResultsQueue.get()
+                logging.debug(
+                    "[Released]{diskCheckResultsQueue} Application_thread released from call to diskCheckResultsQueue.get()")
+            #print("Returned data: "+returned_data)
+                newDisc = disc_metaData(returned_data)
+                diskCheckResultsQueue.task_done()
+                start_title_rip(newDisc)
+
+            else :
+                results = diskCheckResultsQueue.get()
+                logging.debug(
+                    "[Released]{diskCheckResultsQueue} :: INFO ::")
+                #print(results)
+                logging.debug(
+                    "[Released]{diskCheckResultsQueue} :: ERROR :: Start released from diskCheckResultsQueue.get()!")
+                diskCheckResultsQueue.task_done()'''
+
+            #newDisc.meta_parse(newDisc.raw)
+                    #TODO: Add to queue to be ripped by a ripping Thread. Set isRipped to True
+            #TODO: Check rip Queue, and create/spawn another thread with new rip to process (Rip Job)
+            '''
+                Rip Jobs have logs associated with them.
+                
+                - The progress log
+                - The messages log
+                - The job/debug log
+                
+            '''
             """
                 Below code a placeholder untill main logic implemented
 
@@ -1276,9 +1333,10 @@ class main_application_thread_Class(threading.Thread):
                         Then proceed to create rip_threads to run makemkv on title/device.
                         Note: MUST limit one thread per device.
             """
-            print("Sleeping Application Thread (45 Seconds), then shutting down")
-            time.sleep(45)
-            self.stop()
+            '''logging.debug("Checking SHUTDOWN_TRIGGERED: "+str(SHUTDOWN_TRIGGERED))
+            if SHUTDOWN_TRIGGERED:
+                logging.info("Shutting down")
+                self.stop()'''
         #Proceed to shutdown process to exit application/program       
         message_Logging_Queue.put((app_log_mesg,"[END] Application thread stopped!"))
         #Need to manually trigger drive thread to stop

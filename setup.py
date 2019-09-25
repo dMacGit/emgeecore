@@ -21,6 +21,7 @@ setup(
     ],
     install_requires=[
         "meta_core>=1.0",
+        "python-prctl>=1.0",
     ],
     dependency_links=[
         "git+https://github.com/dMacGit/meta_core#egg=meta_core-1.0",

@@ -1,1 +1,2 @@
 -e git://github.com/dMacGit/meta_core.git#egg=meta_core
+python-prctl>=1.0

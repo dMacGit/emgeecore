@@ -1,16 +1,42 @@
-## Emgeecore - Backend logic for emgee (Media Grabber) application
+# Emgeecore - Backend for (Media Grabber) application
 
-[![Release](https://img.shields.io/github/release/dmacgit/emgeecore.svg)](https://github.com/dMacGit/emgeecore/releases/latest) [![Commit](https://img.shields.io/github/tag/dmacgit/emgeecore.svg)](https://github.com/dMacGit/emgeecore/tag/latest)
 
-This is the backend logic running my main project, the [Media Grabber Application](https://github.com/dMacGit/Media_Grabber).
+[![Release](https://img.shields.io/github/release/dmacgit/emgeecore.svg)](https://github.com/dMacGit/emgeecore/releases/latest) [![Commit](https://img.shields.io/github/tag/dmacgit/emgeecore.svg)](https://github.com/dMacGit/emgeecore/tags/latest)
 
-### Background:
+### __*An automated way to backup your media collection to your computer*__
 
-Want a automated way to backup your media collection to your computer? Well I do. 
+*This is the backend logic which runs the frontend [Media Grabber Application](https://github.com/dMacGit/Media_Grabber).*
 
-Being inspired by a few other github projects on the web, I decided to create what I wanted based on my needs.
+## Table of Contents
 
-### Checklist
+- [General Info](#General-Info)
+- [Technologies](#Technologies)
+- [Setup](#Setup)
+- [How to Use](#How-to-Use)
+- [Future Plans](#Future-Plans)
+- [Status](#Status)
+
+## General Info
+
+This application runs the Backend Server, which contains the core logic to Automate Ripping, and Encoding a DVD or CD to a target location.
+
+It keeps track of jobs via, source-device, and if the job is ripped or encoded for example. It makes use of job-text files. This is Still work in progress.
+
+Uses the makemkv-cli to rip a disc title once detected.
+
+## Technologies
+
+TODO
+
+## Setup
+
+TODO
+
+## How To Use
+
+TODO
+
+### Future Plans
 
 By the end of the project, I hope to have the followoing features.
 
@@ -22,3 +48,6 @@ By the end of the project, I hope to have the followoing features.
 * Keeping logs based on device/disc/backup job etc.
 * Compatibity with Front end [Media Grabber Application](https://github.com/dMacGit/Media_Grabber).
 
+## Status
+
+### - Active Deveopment

@@ -19,24 +19,30 @@
 ## General Info
 
 This application runs the Backend Server, which contains the core logic to Automate Ripping, and Encoding a DVD or CD to a target location.
+Uses the `Makemkv-cli` 3rd Party API to rip a disc title once detected.
 
-It keeps track of jobs via, source-device, and if the job is ripped or encoded for example. It makes use of job-text files. This is Still work in progress.
+It keeps track of jobs via job-files, which include source-device ID's, media ID's and job ID's. Also keeps track of if the job is ripped or encoded for example. 
 
-Uses the makemkv-cli to rip a disc title once detected.
+### *This is Still work in progress.*
+
 
 ## Technologies
 
-TODO
+- Python 3
+- [Makemkv](https://www.makemkv.com/) (**3rd Party API**) 
+- [Meta-Core](https://github.com/dMacGit/meta_core) (**Another Personal Project**)
 
 ## Setup
 
-TODO
+1. Clone the Repository into your chosen/target directory
+2. Navagate to the directory and open the Terminal. Install the requirements by running this command: `pip3 install -r requirements.txt`
 
 ## How To Use
 
-TODO
+1. To run the application Run: `python main.py` in the terminal. 
+2. `CTRL + C` to exit the app.
 
-### Future Plans
+## Future Plans
 
 By the end of the project, I hope to have the followoing features.
 
